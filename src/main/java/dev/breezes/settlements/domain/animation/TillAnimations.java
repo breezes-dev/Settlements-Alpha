@@ -24,6 +24,8 @@ public final class TillAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(4)
                 .blendOutTicks(4)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
                 .arms(ArmConfiguration.BOTH_STRAIGHT)
                 .armConfigurationAt(ARM_RETURN_TO_CROSSED_AT_TICK, ArmConfiguration.BOTH_CROSSED)
                 .track(AnimationTrack.<Vector3f>builder()
@@ -62,7 +64,7 @@ public final class TillAnimations {
                         .build())
                 // The asymmetric yaw keeps the stance planted throughout the swing.
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, -7.5f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(5, RotationUtil.degrees(5.0f, -7.5f, 0.0f), Easing.CUBIC),
@@ -70,7 +72,7 @@ public final class TillAnimations {
                                 new Keyframe<>(20, RotationUtil.degrees(0.0f, -7.5f, 0.0f), Easing.CUBIC)))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 7.5f, 0.0f), Easing.CUBIC)))
                         .build())
@@ -101,23 +103,13 @@ public final class TillAnimations {
                                 new Keyframe<>(25, Vec3.ZERO, Easing.CUBIC)))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(8, RotationUtil.degrees(22.5f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(10, RotationUtil.degrees(30.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(15, RotationUtil.degrees(22.5f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(20, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC)))
-                        .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.0, 0.0), Easing.LINEAR)))
-                        .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.0, 0.0), Easing.LINEAR)))
                         .build())
                 .build();
     }

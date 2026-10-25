@@ -163,7 +163,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     private static final SyncedDataWrapper<Byte> DATA_MOTION_ARCHETYPE = SyncedDataWrapper.<Byte>builder()
             .entityClass(BaseVillager.class)
             .serializer(EntityDataSerializers.BYTE)
-            .defaultValue(AnimationArchetype.IDLE.toNetworkByte())
+            .defaultValue(AnimationArchetype.NONE.toNetworkByte())
             .build();
     private static final SyncedDataWrapper<Byte> DATA_MOTION_GENERATION = SyncedDataWrapper.<Byte>builder()
             .entityClass(BaseVillager.class)
@@ -1169,12 +1169,12 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * This villager's animation state, built with the factory the first time it is asked for.
+     * This villager's animation state, built lazily.
      */
     @ClientSide
     public VillagerAnimator getAnimator(@Nonnull VillagerAnimatorFactory factory) {
         if (this.animator == null) {
-            this.animator = factory.create(this.getId());
+            this.animator = factory.create();
         }
         return this.animator;
     }

@@ -31,11 +31,11 @@ public final class CourtshipChoreographyLibrary {
                 // Routine 0: Offer-and-accept — presenter offers attentively, receiver reacts warmly.
                 FixedTempoChoreographyTimeline.builder()
                         .beats(List.of(
-                                new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.IDLE, null),
+                                new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.NONE, null),
                                 new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.POINT, SoundEvents.VILLAGER_YES),
                                 new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.EAT, null),
-                                new CourtshipBeat(AnimationArchetype.IDLE, AnimationArchetype.INTERACT, null),
-                                new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.IDLE, SoundEvents.VILLAGER_YES),
+                                new CourtshipBeat(AnimationArchetype.NONE, AnimationArchetype.INTERACT, null),
+                                new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.NONE, SoundEvents.VILLAGER_YES),
                                 new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.INTERACT, null)
                         ))
                         .ticksPerBeat(TICKS_PER_BEAT)
@@ -45,9 +45,9 @@ public final class CourtshipChoreographyLibrary {
                 FixedTempoChoreographyTimeline.builder()
                         .beats(List.of(
                                 new CourtshipBeat(AnimationArchetype.EAT, AnimationArchetype.EAT, null),
-                                new CourtshipBeat(AnimationArchetype.IDLE, AnimationArchetype.POINT, null),
+                                new CourtshipBeat(AnimationArchetype.NONE, AnimationArchetype.POINT, null),
                                 new CourtshipBeat(AnimationArchetype.EAT, AnimationArchetype.EAT, SoundEvents.VILLAGER_YES),
-                                new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.IDLE, null),
+                                new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.NONE, null),
                                 new CourtshipBeat(AnimationArchetype.EAT, AnimationArchetype.EAT, null)
                         ))
                         .ticksPerBeat(TICKS_PER_BEAT)
@@ -56,12 +56,12 @@ public final class CourtshipChoreographyLibrary {
                 // Routine 2: Conversation — alternating gestures, as if swapping excited stories.
                 FixedTempoChoreographyTimeline.builder()
                         .beats(List.of(
-                                new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.IDLE, null),
-                                new CourtshipBeat(AnimationArchetype.IDLE, AnimationArchetype.POINT, SoundEvents.VILLAGER_YES),
-                                new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.IDLE, null),
-                                new CourtshipBeat(AnimationArchetype.IDLE, AnimationArchetype.INTERACT, null),
+                                new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.NONE, null),
+                                new CourtshipBeat(AnimationArchetype.NONE, AnimationArchetype.POINT, SoundEvents.VILLAGER_YES),
+                                new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.NONE, null),
+                                new CourtshipBeat(AnimationArchetype.NONE, AnimationArchetype.INTERACT, null),
                                 new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.POINT, SoundEvents.VILLAGER_YES),
-                                new CourtshipBeat(AnimationArchetype.IDLE, AnimationArchetype.IDLE, null)
+                                new CourtshipBeat(AnimationArchetype.NONE, AnimationArchetype.NONE, null)
                         ))
                         .ticksPerBeat(TICKS_PER_BEAT)
                         .build(),
@@ -70,10 +70,10 @@ public final class CourtshipChoreographyLibrary {
                 FixedTempoChoreographyTimeline.builder()
                         .beats(List.of(
                                 new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.POINT, null),
-                                new CourtshipBeat(AnimationArchetype.IDLE, AnimationArchetype.INTERACT, null),
+                                new CourtshipBeat(AnimationArchetype.NONE, AnimationArchetype.INTERACT, null),
                                 new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.EAT, SoundEvents.VILLAGER_YES),
-                                new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.IDLE, null),
-                                new CourtshipBeat(AnimationArchetype.IDLE, AnimationArchetype.POINT, null)
+                                new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.NONE, null),
+                                new CourtshipBeat(AnimationArchetype.NONE, AnimationArchetype.POINT, null)
                         ))
                         .ticksPerBeat(TICKS_PER_BEAT)
                         .build()

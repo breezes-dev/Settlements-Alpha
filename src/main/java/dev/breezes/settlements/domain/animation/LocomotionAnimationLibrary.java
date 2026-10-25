@@ -6,6 +6,11 @@ import javax.annotation.Nonnull;
 
 public interface LocomotionAnimationLibrary {
 
+    /**
+     * The constant posture of a villager standing still.
+     */
+    KeyframeAnimation standingPose();
+
     KeyframeAnimation resolve(@Nonnull NavigationType navigationType);
 
 }

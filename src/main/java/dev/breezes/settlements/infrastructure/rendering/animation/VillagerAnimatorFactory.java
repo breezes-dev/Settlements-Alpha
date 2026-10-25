@@ -1,12 +1,15 @@
 package dev.breezes.settlements.infrastructure.rendering.animation;
 
 import dev.breezes.settlements.di.ClientSessionScope;
-import dev.breezes.settlements.domain.animation.AnimationResolver;
-import dev.breezes.settlements.domain.animation.IdleLifeAnimatorFactory;
-import dev.breezes.settlements.domain.animation.LayerStackAnimators;
-import dev.breezes.settlements.domain.animation.LocomotionAnimator;
+import dev.breezes.settlements.domain.animation.AmbientAnimationLibrary;
+import dev.breezes.settlements.domain.animation.AnimationLibrary;
+import dev.breezes.settlements.domain.animation.BakedAnimationRegistry;
+import dev.breezes.settlements.domain.animation.IdleAnimationLibrary;
+import dev.breezes.settlements.domain.animation.LocomotionAnimationLibrary;
 import dev.breezes.settlements.domain.animation.UmbrellaAnimatorFactory;
+import dev.breezes.settlements.domain.animation.VillagerAnimationPipeline;
 import dev.breezes.settlements.domain.animation.VillagerAnimator;
+import dev.breezes.settlements.shared.util.RandomUtil;
 import jakarta.inject.Inject;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -18,17 +21,25 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor(access = AccessLevel.PACKAGE, onConstructor_ = @Inject)
 public final class VillagerAnimatorFactory {
 
-    private final AnimationResolver animationResolver;
-    private final IdleLifeAnimatorFactory idleLifeAnimatorFactory;
-    private final LocomotionAnimator locomotionAnimator;
+    private final AnimationLibrary animationLibrary;
+    private final IdleAnimationLibrary idleAnimationLibrary;
+    private final AmbientAnimationLibrary ambientAnimationLibrary;
+    private final LocomotionAnimationLibrary locomotionAnimationLibrary;
+    private final BakedAnimationRegistry bakedAnimationRegistry;
     private final UmbrellaAnimatorFactory umbrellaAnimatorFactory;
 
-    public VillagerAnimator create(int entityId) {
-        return new VillagerAnimator(this.animationResolver, LayerStackAnimators.builder()
-                .idleLife(this.idleLifeAnimatorFactory.create(entityId))
-                .locomotion(this.locomotionAnimator)
-                .umbrella(this.umbrellaAnimatorFactory.create())
-                .build(), entityId);
+    /**
+     * Creates the animator for one villager.
+     */
+    public VillagerAnimator create() {
+        return new VillagerAnimator(new VillagerAnimationPipeline(
+                this.animationLibrary,
+                this.idleAnimationLibrary,
+                this.ambientAnimationLibrary,
+                this.locomotionAnimationLibrary,
+                this.bakedAnimationRegistry,
+                this.umbrellaAnimatorFactory.create(),
+                RandomUtil.RANDOM));
     }
 
 }

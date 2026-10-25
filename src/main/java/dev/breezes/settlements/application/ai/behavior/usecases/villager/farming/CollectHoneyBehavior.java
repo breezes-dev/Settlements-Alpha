@@ -192,7 +192,7 @@ public class CollectHoneyBehavior extends VillagerStateMachineBehavior {
     protected void onBehaviorStop(@Nonnull Level world,
                                   @Nonnull BaseVillager villager) {
         villager.clearHeldItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         villager.getNavigationManager().stop();
     }
 

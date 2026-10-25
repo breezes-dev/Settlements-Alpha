@@ -1,5 +1,6 @@
 package dev.breezes.settlements.presentation.ui.stats;
 
+import dev.breezes.settlements.infrastructure.rendering.animation.ObservationalVillagerRenderFlag;
 import dev.breezes.settlements.presentation.ui.framework.BaseElement;
 import dev.breezes.settlements.presentation.ui.framework.Bounds;
 import dev.breezes.settlements.presentation.ui.framework.Insets;
@@ -35,6 +36,7 @@ class VillagerModelElement extends BaseElement {
     private static final int DEFAULT_ENTITY_SCALE = 20;
 
     private final IntSupplier entityIdSupplier;
+    private final ObservationalVillagerRenderFlag observationalRenderFlag;
     private final UITheme theme;
 
     // Cached per-frame math objects, can be modified via .set()
@@ -43,9 +45,11 @@ class VillagerModelElement extends BaseElement {
     private final Vector3f cachedTranslate = new Vector3f();
 
     VillagerModelElement(@Nonnull IntSupplier entityIdSupplier,
+                         @Nonnull ObservationalVillagerRenderFlag observationalRenderFlag,
                          @Nonnull UITheme theme) {
         super(SizeConstraint.FILL, SizeConstraint.fixed(MAX_SIZE), Insets.NONE);
         this.entityIdSupplier = entityIdSupplier;
+        this.observationalRenderFlag = observationalRenderFlag;
         this.theme = theme;
     }
 
@@ -123,7 +127,14 @@ class VillagerModelElement extends BaseElement {
             float adjustedScale = (float) DEFAULT_ENTITY_SCALE / entityScale;
 
             graphics.enableScissor(x1, y1, x2, y2);
-            InventoryScreen.renderEntityInInventory(graphics, centerX, centerY, adjustedScale, cachedTranslate, cachedPose, cachedCamera, entity);
+            // The preview overwrites the live villager's rotations and renders at a partial tick of 1.0, so its
+            // animation must be evaluated without committing anything to the villager's own animation state
+            this.observationalRenderFlag.raise();
+            try {
+                InventoryScreen.renderEntityInInventory(graphics, centerX, centerY, adjustedScale, cachedTranslate, cachedPose, cachedCamera, entity);
+            } finally {
+                this.observationalRenderFlag.lower();
+            }
             graphics.disableScissor();
         } finally {
             // Restore entity rotation state even if rendering throws

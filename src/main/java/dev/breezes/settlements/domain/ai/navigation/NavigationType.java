@@ -14,6 +14,8 @@ public enum NavigationType {
     PANIC(0.9F),
     ;
 
+    private static final NavigationType[] VALUES = values();
+
     private final float baseModifier;
 
     public byte toNetworkByte() {
@@ -21,12 +23,11 @@ public enum NavigationType {
     }
 
     public static NavigationType fromNetworkByte(byte encoded) {
-        NavigationType[] values = NavigationType.values();
         int index = Byte.toUnsignedInt(encoded);
-        if (index >= values.length) {
+        if (index >= VALUES.length) {
             return WALK;
         }
-        return values[index];
+        return VALUES[index];
     }
 
 }

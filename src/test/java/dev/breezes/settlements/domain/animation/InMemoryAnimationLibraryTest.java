@@ -23,7 +23,8 @@ class InMemoryAnimationLibraryTest {
                 .build();
 
         // Act
-        KeyframeAnimation resolved = library.resolve(AnimationArchetype.SWING_HEAVY, ItemCategory.AXE);
+        KeyframeAnimation resolved = library.resolve(AnimationArchetype.SWING_HEAVY,
+                new AnimationSelectionContext(ItemCategory.AXE));
 
         // Assert
         assertSame(exact, resolved);
@@ -38,7 +39,8 @@ class InMemoryAnimationLibraryTest {
                 .build();
 
         // Act
-        KeyframeAnimation resolved = library.resolve(AnimationArchetype.SWING_HEAVY, ItemCategory.MACE);
+        KeyframeAnimation resolved = library.resolve(AnimationArchetype.SWING_HEAVY,
+                new AnimationSelectionContext(ItemCategory.MACE));
 
         // Assert
         assertSame(generic, resolved);
@@ -49,11 +51,11 @@ class InMemoryAnimationLibraryTest {
         // Arrange
         KeyframeAnimation idle = animation("idle");
         InMemoryAnimationLibrary library = InMemoryAnimationLibrary.builder()
-                .animations(Map.of(AnimationKey.of(AnimationArchetype.IDLE, ItemCategory.GENERIC), idle))
+                .animations(Map.of(AnimationKey.of(AnimationArchetype.NONE, ItemCategory.GENERIC), idle))
                 .build();
 
         // Act
-        KeyframeAnimation resolved = library.resolve(AnimationArchetype.POINT, ItemCategory.GENERIC);
+        KeyframeAnimation resolved = library.resolve(AnimationArchetype.POINT, AnimationSelectionContext.generic());
 
         // Assert
         assertSame(idle, resolved);

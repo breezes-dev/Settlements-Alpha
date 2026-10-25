@@ -6,12 +6,14 @@ import dev.breezes.settlements.shared.annotations.functional.ClientSide;
 import dev.breezes.settlements.shared.annotations.stylistic.VisibleForTesting;
 import dev.breezes.settlements.shared.util.ArgbColorUtil;
 import jakarta.inject.Inject;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.OutlineBufferSource;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.util.Mth;
+import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -142,7 +144,8 @@ public final class EntityHighlightRenderer {
         MultiBufferSource outlineOnlySource = OutlineOnlyBufferSource.wrapping(outlineBufferSource);
         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
         PoseStack poseStack = event.getPoseStack();
-        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+        DeltaTracker deltaTracker = event.getPartialTick();
+        TickRateManager tickRateManager = minecraft.level.tickRateManager();
         Vec3 cameraPos = event.getCamera().getPosition();
 
         for (Entity entity : entities) {
@@ -151,6 +154,10 @@ public final class EntityHighlightRenderer {
             // time, so it must be set immediately each own render call for resting and hover colors to coexist
             // correctly within the same frame.
             outlineBufferSource.setColor(ArgbColorUtil.red(color), ArgbColorUtil.green(color), ArgbColorUtil.blue(color), ArgbColorUtil.alpha(color));
+
+            // The same per-entity partial tick vanilla's entity pass draws with, so under a tick freeze an entity
+            // exempt from it is outlined where it is drawn and both passes share one animation sample
+            float partialTick = deltaTracker.getGameTimeDeltaPartialTick(!tickRateManager.isEntityFrozen(entity));
             renderOutlined(entity, cameraPos, partialTick, poseStack, outlineOnlySource, dispatcher);
         }
     }

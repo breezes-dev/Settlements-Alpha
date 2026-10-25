@@ -117,7 +117,7 @@ public class ThrowEggsAtHostileBehavior extends VillagerStateMachineBehavior {
     @Override
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
         villager.getNavigationManager().stop();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         villager.clearHeldItem();
         villager.clearOffhandItem();
     }

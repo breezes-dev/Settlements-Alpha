@@ -5,7 +5,6 @@ import dev.breezes.settlements.shared.util.ResourceLocationUtil;
 import dev.breezes.settlements.shared.util.RotationUtil;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import java.util.List;
@@ -23,6 +22,8 @@ public final class RepairIronGolemAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(4)
                 .blendOutTicks(4)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
                 .arms(ArmConfiguration.BOTH_STRAIGHT)
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.ARM_STRAIGHT_LEFT_ROTATION)
@@ -41,7 +42,7 @@ public final class RepairIronGolemAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.55f, -0.94f, 0.0f), Easing.LINEAR),
                                 new Keyframe<>(1, RotationUtil.degrees(0.39f, -0.45f, 0.0f), Easing.LINEAR),
@@ -95,26 +96,14 @@ public final class RepairIronGolemAnimations {
                                 new Keyframe<>(20, RotationUtil.degrees(10.0f, 0.0f, 0.0f), Easing.CUBIC)
                         ))
                         .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.0, 0.0), Easing.LINEAR)
-                        ))
-                        .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.0, 0.0), Easing.LINEAR)
-                        ))
-                        .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, -7.5f, 0.0f), Easing.LINEAR)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 7.5f, 0.0f), Easing.LINEAR)
                         ))

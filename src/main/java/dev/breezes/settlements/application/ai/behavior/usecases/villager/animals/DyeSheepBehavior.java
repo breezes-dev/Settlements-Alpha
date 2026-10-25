@@ -204,7 +204,7 @@ public class DyeSheepBehavior extends VillagerStateMachineBehavior {
 
         villager.getNavigationManager().stop();
         villager.clearHeldItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         this.dyedSheepIds.clear();
         this.selectedDyeColor = null;
         this.shouldRewardExperience = false;

@@ -22,6 +22,10 @@ public final class WaveAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(4)
                 .blendOutTicks(4)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
+                // The lids hold the eyes wide, which an owning blink would otherwise close fully
+                .suppresses(SuppressibleComponent.BLINK)
                 .arms(ArmConfiguration.LEFT_CROSSED_RIGHT_STRAIGHT)
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.ARM_STRAIGHT_RIGHT_ROTATION)
@@ -47,7 +51,7 @@ public final class WaveAnimations {
                                 new Keyframe<>(30, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.LINEAR)))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, -7.5f, -1.0f), Easing.CUBIC),
                                 new Keyframe<>(7, RotationUtil.degrees(5.0f, -7.5f, -1.0f), Easing.CUBIC),
@@ -55,7 +59,7 @@ public final class WaveAnimations {
                                 new Keyframe<>(30, RotationUtil.degrees(0.0f, -7.5f, -1.0f), Easing.CUBIC)))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 7.5f, 1.0f), Easing.CUBIC),
                                 new Keyframe<>(7, RotationUtil.degrees(-5.0f, 7.5f, 1.0f), Easing.CUBIC),
@@ -94,7 +98,7 @@ public final class WaveAnimations {
                                 new Keyframe<>(30, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC)))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(10, RotationUtil.degrees(0.0f, 0.0f, 1.0f), Easing.CUBIC),
@@ -127,11 +131,6 @@ public final class WaveAnimations {
                                 new Keyframe<>(20, new Vector3f(1.0f, 1.4f, 1.0f), Easing.LINEAR),
                                 new Keyframe<>(27, new Vector3f(1.0f, 1.0f, 1.0f), Easing.LINEAR)))
                         .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.0, 0.0), Easing.CUBIC)))
-                        .build())
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.PUPIL_LEFT_SCALE)
                         .keyframes(List.of(
@@ -155,11 +154,6 @@ public final class WaveAnimations {
                                 new Keyframe<>(6, new Vector3f(1.0f, 1.4f, 1.0f), Easing.LINEAR),
                                 new Keyframe<>(20, new Vector3f(1.0f, 1.4f, 1.0f), Easing.LINEAR),
                                 new Keyframe<>(27, new Vector3f(1.0f, 1.0f, 1.0f), Easing.LINEAR)))
-                        .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.0, 0.0), Easing.CUBIC)))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.PUPIL_RIGHT_SCALE)

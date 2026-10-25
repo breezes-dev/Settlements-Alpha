@@ -2,12 +2,12 @@ package dev.breezes.settlements.infrastructure.minecraft.entities.villager.model
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.breezes.settlements.domain.animation.AnimationFrame;
+import dev.breezes.settlements.domain.animation.AnimationPose;
 import dev.breezes.settlements.domain.animation.UmbrellaAnimationTargets;
 import dev.breezes.settlements.domain.attachment.UmbrellaPattern;
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.model.rendering.AttachmentModel;
+import dev.breezes.settlements.infrastructure.rendering.animation.ModelPartRigBinding;
 import dev.breezes.settlements.shared.util.ResourceLocationUtil;
-import lombok.Getter;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -23,15 +23,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Locale;
-
+import java.util.Map;
+import java.util.Optional;
 
 @OnlyIn(Dist.CLIENT)
-@Getter
 public class UmbrellaModel implements AttachmentModel {
 
     public static final ResourceLocation ID = ResourceLocationUtil.mod("umbrella");
@@ -44,19 +43,29 @@ public class UmbrellaModel implements AttachmentModel {
             .toArray(ResourceLocation[]::new);
 
     private final ModelPart root;
-    private final ModelPart canopy;
-    private final ModelPart north;
-    private final ModelPart south;
-    private final ModelPart east;
-    private final ModelPart west;
+    private final ModelPartRigBinding rigBinding;
 
-    public UmbrellaModel(ModelPart root) {
+    /**
+     * The rig's root offset, which no channel animates.
+     */
+    private final Vec3 rootPivotOffset;
+
+    /**
+     * @throws IllegalArgumentException if a model-part channel of the umbrella rig names a part the layer lacks
+     */
+    public UmbrellaModel(@Nonnull ModelPart root) {
         this.root = root.getChild("umbrella");
-        this.canopy = this.root.getChild("canopy");
-        this.north = this.canopy.getChild("north");
-        this.south = this.canopy.getChild("south");
-        this.east = this.canopy.getChild("east");
-        this.west = this.canopy.getChild("west");
+        ModelPart canopy = this.root.getChild("canopy");
+        Map<String, ModelPart> partsByName = Map.of(
+                "canopy", canopy,
+                "north", canopy.getChild("north"),
+                "south", canopy.getChild("south"),
+                "east", canopy.getChild("east"),
+                "west", canopy.getChild("west"));
+        this.rigBinding = new ModelPartRigBinding(UmbrellaAnimationTargets.RIG, this.root,
+                name -> Optional.ofNullable(partsByName.get(name)));
+        this.rootPivotOffset = new Vec3(this.root.x / MODEL_UNITS_PER_BLOCK, this.root.y / MODEL_UNITS_PER_BLOCK,
+                this.root.z / MODEL_UNITS_PER_BLOCK);
     }
 
     /**
@@ -106,66 +115,22 @@ public class UmbrellaModel implements AttachmentModel {
 
     @Override
     public Vec3 rootPivotOffset() {
-        return new Vec3(this.root.x / MODEL_UNITS_PER_BLOCK, this.root.y / MODEL_UNITS_PER_BLOCK, this.root.z / MODEL_UNITS_PER_BLOCK);
+        return this.rootPivotOffset;
     }
 
     @Override
-    public void render(@Nonnull AnimationFrame frame,
+    public void render(@Nonnull AnimationPose pose,
                        @Nonnull PoseStack poseStack,
                        @Nonnull MultiBufferSource buffer,
                        int packedLight,
                        @Nonnull ResourceLocation texture) {
-        this.root.getAllParts().forEach(ModelPart::resetPose);
-        this.applyAnimationFrame(frame);
+        this.rigBinding.resetToRest();
+        this.rigBinding.apply(pose);
 
         // entityCutoutNoCull, not a culling cutout: only one face of each canopy panel is painted, so
         // culling would make the canopy vanish when viewed from the unpainted side.
         VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(texture));
         this.root.render(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY);
-    }
-
-    /**
-     * Applies the umbrella-bone targets in the given frame onto this model's bones.
-     *
-     * @param frame the sampled animation frame to apply; a target absent from it leaves its bone untouched
-     */
-    private void applyAnimationFrame(AnimationFrame frame) {
-        applyTranslation(this.canopy, frame.get(UmbrellaAnimationTargets.CANOPY_TRANSLATION));
-
-        applyRotation(this.north, frame.get(UmbrellaAnimationTargets.NORTH_ROTATION));
-        applyTranslation(this.north, frame.get(UmbrellaAnimationTargets.NORTH_TRANSLATION));
-        applyScale(this.north, frame.get(UmbrellaAnimationTargets.NORTH_SCALE));
-
-        applyRotation(this.south, frame.get(UmbrellaAnimationTargets.SOUTH_ROTATION));
-        applyTranslation(this.south, frame.get(UmbrellaAnimationTargets.SOUTH_TRANSLATION));
-        applyScale(this.south, frame.get(UmbrellaAnimationTargets.SOUTH_SCALE));
-
-        applyRotation(this.east, frame.get(UmbrellaAnimationTargets.EAST_ROTATION));
-        applyTranslation(this.east, frame.get(UmbrellaAnimationTargets.EAST_TRANSLATION));
-        applyScale(this.east, frame.get(UmbrellaAnimationTargets.EAST_SCALE));
-
-        applyRotation(this.west, frame.get(UmbrellaAnimationTargets.WEST_ROTATION));
-        applyTranslation(this.west, frame.get(UmbrellaAnimationTargets.WEST_TRANSLATION));
-        applyScale(this.west, frame.get(UmbrellaAnimationTargets.WEST_SCALE));
-    }
-
-    private static void applyRotation(ModelPart part, Vector3f rotation) {
-        part.xRot += rotation.x();
-        part.yRot += rotation.y();
-        part.zRot += rotation.z();
-    }
-
-    private static void applyTranslation(ModelPart part, Vec3 translation) {
-        part.x += (float) translation.x;
-        part.y += (float) translation.y;
-        part.z += (float) translation.z;
-    }
-
-    // Multiplicative onto resetPose's unit scale, so the unit-neutral (1,1,1) is a no-op
-    private static void applyScale(ModelPart part, Vector3f scale) {
-        part.xScale *= scale.x();
-        part.yScale *= scale.y();
-        part.zScale *= scale.z();
     }
 
 }

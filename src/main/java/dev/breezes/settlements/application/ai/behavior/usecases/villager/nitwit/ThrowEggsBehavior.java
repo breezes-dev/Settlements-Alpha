@@ -144,7 +144,7 @@ public class ThrowEggsBehavior extends VillagerStateMachineBehavior {
                     Level world = villager.level();
 
                     // Drop the windmill while scampering so the run reads as normal locomotion
-                    villager.setMotion(AnimationArchetype.IDLE);
+                    villager.setMotion(AnimationArchetype.NONE);
 
                     // Project a random angle around the victim and snap to surface height
                     double angle = RandomUtil.randomDouble(0, 2 * Math.PI);
@@ -243,7 +243,7 @@ public class ThrowEggsBehavior extends VillagerStateMachineBehavior {
     @Override
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
         villager.getNavigationManager().stop();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         villager.clearHeldItem();
         villager.clearOffhandItem();
         this.victim = null;

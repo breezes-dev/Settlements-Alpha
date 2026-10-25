@@ -1,6 +1,7 @@
 package dev.breezes.settlements.presentation.ui.stats;
 
 import dev.breezes.settlements.application.ui.sync.UiScreenOpener;
+import dev.breezes.settlements.infrastructure.rendering.animation.ObservationalVillagerRenderFlag;
 import dev.breezes.settlements.presentation.ui.sync.UiClientState;
 import jakarta.inject.Inject;
 import lombok.AccessLevel;
@@ -11,10 +12,12 @@ import net.minecraft.client.Minecraft;
 public final class VillagerStatsScreenOpener implements UiScreenOpener {
 
     private final UiClientState uiClientState;
+    private final ObservationalVillagerRenderFlag observationalRenderFlag;
 
     @Override
     public void openScreen(long sessionId, int villagerEntityId) {
-        Minecraft.getInstance().setScreen(new VillagerStatsScreen(sessionId, this.uiClientState, villagerEntityId));
+        Minecraft.getInstance().setScreen(new VillagerStatsScreen(sessionId, this.uiClientState,
+                this.observationalRenderFlag, villagerEntityId));
     }
 
 }

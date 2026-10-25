@@ -1,11 +1,15 @@
 package dev.breezes.settlements.infrastructure.minecraft.entities.villager.model.rendering;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
-import dev.breezes.settlements.domain.animation.AnimationFrame;
-import dev.breezes.settlements.domain.animation.SlotTargets;
+import dev.breezes.settlements.domain.animation.AnimationBone;
+import dev.breezes.settlements.domain.animation.AnimationChannelKind;
+import dev.breezes.settlements.domain.animation.AnimationPose;
+import dev.breezes.settlements.domain.animation.AnimationRig;
+import dev.breezes.settlements.domain.animation.VillagerAnimationRig;
+import dev.breezes.settlements.domain.animation.VillagerAnimationSnapshot;
 import dev.breezes.settlements.domain.attachment.AttachmentContent;
 import dev.breezes.settlements.domain.attachment.AttachmentProvider;
+import dev.breezes.settlements.domain.attachment.AttachmentSlot;
 import dev.breezes.settlements.domain.attachment.RenderableAttachment;
 import dev.breezes.settlements.domain.inventory.EquipmentSlot;
 import dev.breezes.settlements.domain.presentation.ArmConfiguration;
@@ -20,27 +24,46 @@ import dev.breezes.settlements.infrastructure.minecraft.entities.villager.BaseVi
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.model.SettlementsVillagerModel;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, SettlementsVillagerModel<BaseVillager>> {
+/**
+ * Draws all attachments the providers emit for a villager, placed by its socket, display profile, and the slot's
+ * channels in the snapshot for this render.
+ */
+public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, SettlementsVillagerModel> {
 
-    private final SettlementsVillagerRenderer renderer;
+    private static final AnimationRig RIG = VillagerAnimationRig.RIG;
+    private static final int NO_CHANNEL = -1;
+
+    private final VillagerAnimationRenderAdapter animationAdapter;
     private final ItemInHandRenderer itemInHandRenderer;
     private final AttachmentModelRegistry attachmentModelRegistry;
-    private final List<AttachmentProvider> attachmentProviders;
+    private final AttachmentProvider[] attachmentProviders;
     private final SlotAnchorRegistry slotAnchorRegistry;
     private final SocketRegistry socketRegistry;
     private final AttachmentDisplayProfileRegistry displayProfileRegistry;
 
-    public AttachmentRenderLayer(@Nonnull SettlementsVillagerRenderer renderer,
+    // Each slot's channel indexes, resolved once so a render reads them without building the slot's targets
+    private final Map<AttachmentSlot, Integer> translationChannelBySlot;
+    private final Map<AttachmentSlot, Integer> rotationChannelBySlot;
+
+    // Scratch for applying rotations, so placing an attachment allocates no quaternion
+    private final Quaternionf rotationScratch = new Quaternionf();
+
+    public AttachmentRenderLayer(@Nonnull RenderLayerParent<BaseVillager, SettlementsVillagerModel> renderer,
+                                 @Nonnull VillagerAnimationRenderAdapter animationAdapter,
                                  @Nonnull ItemInHandRenderer itemInHandRenderer,
                                  @Nonnull AttachmentModelRegistry attachmentModelRegistry,
                                  @Nonnull Set<AttachmentProvider> attachmentProviders,
@@ -48,16 +71,18 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
                                  @Nonnull SocketRegistry socketRegistry,
                                  @Nonnull AttachmentDisplayProfileRegistry displayProfileRegistry) {
         super(renderer);
-        this.renderer = renderer;
+        this.animationAdapter = animationAdapter;
         this.itemInHandRenderer = itemInHandRenderer;
         this.attachmentModelRegistry = attachmentModelRegistry;
         this.attachmentProviders = attachmentProviders.stream()
                 .sorted(Comparator.comparingInt(AttachmentProvider::renderOrder)
                         .thenComparing(provider -> provider.getClass().getName()))
-                .toList();
+                .toArray(AttachmentProvider[]::new);
         this.slotAnchorRegistry = slotAnchorRegistry;
         this.socketRegistry = socketRegistry;
         this.displayProfileRegistry = displayProfileRegistry;
+        this.translationChannelBySlot = slotChannels(AnimationChannelKind.TRANSLATION);
+        this.rotationChannelBySlot = slotChannels(AnimationChannelKind.ROTATION);
     }
 
     @Override
@@ -71,10 +96,11 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
                        float ageInTicks,
                        float netHeadYaw,
                        float headPitch) {
-        AnimationFrame frame = this.renderer.currentFrame();
+        VillagerAnimationSnapshot snapshot = this.animationAdapter.snapshotFor(villager);
         for (AttachmentProvider provider : this.attachmentProviders) {
-            for (RenderableAttachment attachment : provider.attachmentsFor(villager, partialTicks)) {
-                this.renderAttachment(poseStack, buffer, packedLight, villager, attachment, frame);
+            List<RenderableAttachment> attachments = provider.attachmentsFor(villager, snapshot);
+            for (int index = 0; index < attachments.size(); index++) {
+                this.renderAttachment(poseStack, buffer, packedLight, villager, attachments.get(index), snapshot);
             }
         }
     }
@@ -84,15 +110,10 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
                                   int packedLight,
                                   @Nonnull BaseVillager villager,
                                   @Nonnull RenderableAttachment attachment,
-                                  @Nonnull AnimationFrame frame) {
-        if (!frame.get(SlotTargets.visibility(attachment.slot()))) {
-            return;
-        }
-
+                                  @Nonnull VillagerAnimationSnapshot snapshot) {
         SlotAnchor anchor = this.slotAnchorRegistry.get(attachment.slot());
-        // Resolve the socket from the model's current arm config
-        ArmConfiguration config = this.getParentModel().getArmConfiguration();
-        ArmPose handPose = EquipmentSlot.OFF_HAND.equals(attachment.slot()) ? config.left() : config.right();
+        ArmConfiguration arms = snapshot.getArmConfiguration();
+        ArmPose handPose = EquipmentSlot.OFF_HAND.equals(attachment.slot()) ? arms.left() : arms.right();
         Socket socket = this.socketRegistry.get(anchor.socketFor(handPose));
         AttachmentDisplayProfile profile = this.displayProfileRegistry.get(attachment.slot(), attachment.category());
 
@@ -101,36 +122,21 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
             this.getParentModel().applyBoneTransform(poseStack, socket.getBone());
         }
 
-        applyTransform(poseStack, socket.getLocalTranslation(), socket.getLocalRotation(), socket.getLocalScale());
-        applyTransform(poseStack, profile.getTranslation(), profile.getRotation(), profile.getScale());
-
-        // Turned about the content's own pivot point rather than about the origin it is drawn at
-        applyPivotedTransform(
-                poseStack,
-                frame.get(SlotTargets.translation(attachment.slot())),
-                frame.get(SlotTargets.rotation(attachment.slot())),
-                frame.get(SlotTargets.scale(attachment.slot())),
+        this.applyTransform(poseStack, socket.getLocalTranslation(), socket.getLocalRotation(), socket.getLocalScale());
+        this.applyTransform(poseStack, profile.getTranslation(), profile.getRotation(), profile.getScale());
+        this.applySlotChannels(poseStack, snapshot.getPose(), attachment.slot(),
                 this.rootPivotOffsetFor(attachment.content()));
 
-        ItemDisplayContext displayContext = displayContextFor(attachment, anchor, profile, frame);
-        this.renderContent(attachment.content(), villager, displayContext, frame, poseStack, buffer, packedLight);
-        poseStack.popPose();
-    }
-
-    private static ItemDisplayContext displayContextFor(@Nonnull RenderableAttachment attachment,
-                                                        @Nonnull SlotAnchor anchor,
-                                                        @Nonnull AttachmentDisplayProfile profile,
-                                                        @Nonnull AnimationFrame frame) {
-        ItemDisplayContext profileContext = profile.getDisplayContextOverride() == null
+        ItemDisplayContext displayContext = profile.getDisplayContextOverride() == null
                 ? anchor.getDefaultDisplayContext()
                 : profile.getDisplayContextOverride();
-        return frame.get(SlotTargets.displayContext(attachment.slot()), profileContext);
+        this.renderContent(attachment.content(), villager, displayContext, poseStack, buffer, packedLight);
+        poseStack.popPose();
     }
 
     private void renderContent(@Nonnull AttachmentContent content,
                                @Nonnull BaseVillager villager,
                                @Nonnull ItemDisplayContext displayContext,
-                               @Nonnull AnimationFrame frame,
                                @Nonnull PoseStack poseStack,
                                @Nonnull MultiBufferSource buffer,
                                int packedLight) {
@@ -141,7 +147,7 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
             case AttachmentContent.ModelContent modelContent -> {
                 AttachmentModel model = this.attachmentModelRegistry.get(modelContent.modelId());
                 if (model != null) {
-                    model.render(frame, poseStack, buffer, packedLight, modelContent.texture());
+                    model.render(modelContent.pose(), poseStack, buffer, packedLight, modelContent.texture());
                 }
             }
             case AttachmentContent.BillboardContent billboardContent -> {
@@ -150,30 +156,36 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
         }
     }
 
-    private static void applyTransform(@Nonnull PoseStack poseStack,
-                                       @Nonnull Vec3 translation,
-                                       @Nonnull Vector3f rotation,
-                                       float scale) {
-        applyPivotedTransform(poseStack, translation, rotation, scale, Vec3.ZERO);
+    private void applyTransform(@Nonnull PoseStack poseStack,
+                                @Nonnull Vec3 translation,
+                                @Nonnull Vector3f rotation,
+                                float scale) {
+        poseStack.translate(translation.x, translation.y, translation.z);
+        poseStack.mulPose(this.rotationScratch.rotationXYZ(rotation.x(), rotation.y(), rotation.z()));
+        poseStack.scale(scale, scale, scale);
     }
 
     /**
-     * Applies a slot transform whose rotation turns about the given pivot.
-     * <p>
-     * A zero pivot is exactly the unpivoted transform.
+     * Applies the slot's translation and rotation channels from the pose, turning about the given pivot.
+     * A slot the rig has no channel for stays as is.
      */
-    private static void applyPivotedTransform(@Nonnull PoseStack poseStack,
-                                              @Nonnull Vec3 translation,
-                                              @Nonnull Vector3f rotation,
-                                              float scale,
-                                              @Nonnull Vec3 pivot) {
-        poseStack.translate(translation.x, translation.y, translation.z);
-        poseStack.translate(pivot.x, pivot.y, pivot.z);
-        poseStack.mulPose(Axis.XP.rotation(rotation.x()));
-        poseStack.mulPose(Axis.YP.rotation(rotation.y()));
-        poseStack.mulPose(Axis.ZP.rotation(rotation.z()));
-        poseStack.translate(-pivot.x, -pivot.y, -pivot.z);
-        poseStack.scale(scale, scale, scale);
+    private void applySlotChannels(@Nonnull PoseStack poseStack,
+                                   @Nonnull AnimationPose pose,
+                                   @Nonnull AttachmentSlot slot,
+                                   @Nonnull Vec3 pivot) {
+        int translationChannel = channelOf(this.translationChannelBySlot, slot);
+        if (translationChannel != NO_CHANNEL) {
+            poseStack.translate(pose.get(translationChannel, 0), pose.get(translationChannel, 1),
+                    pose.get(translationChannel, 2));
+        }
+
+        int rotationChannel = channelOf(this.rotationChannelBySlot, slot);
+        if (rotationChannel != NO_CHANNEL) {
+            poseStack.translate(pivot.x, pivot.y, pivot.z);
+            poseStack.mulPose(this.rotationScratch.rotationXYZ(pose.get(rotationChannel, 0), pose.get(rotationChannel, 1),
+                    pose.get(rotationChannel, 2)));
+            poseStack.translate(-pivot.x, -pivot.y, -pivot.z);
+        }
     }
 
     /**
@@ -187,6 +199,22 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
 
         AttachmentModel model = this.attachmentModelRegistry.get(modelContent.modelId());
         return model == null ? Vec3.ZERO : model.rootPivotOffset();
+    }
+
+    private static int channelOf(@Nonnull Map<AttachmentSlot, Integer> channelBySlot, @Nonnull AttachmentSlot slot) {
+        Integer channel = channelBySlot.get(slot);
+        return channel == null ? NO_CHANNEL : channel;
+    }
+
+    private static Map<AttachmentSlot, Integer> slotChannels(@Nonnull AnimationChannelKind kind) {
+        Map<AttachmentSlot, Integer> channelBySlot = new HashMap<>();
+        for (int channel = 0; channel < RIG.getChannelCount(); channel++) {
+            if (RIG.kind(channel) == kind
+                    && RIG.channel(channel).getBone() instanceof AnimationBone.Slot(AttachmentSlot slot)) {
+                channelBySlot.put(slot, channel);
+            }
+        }
+        return Map.copyOf(channelBySlot);
     }
 
 }

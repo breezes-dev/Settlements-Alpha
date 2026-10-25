@@ -129,7 +129,7 @@ public class EatFoodBehavior extends VillagerStateMachineBehavior {
                 })
                 .onEnd(context -> {
                     BaseVillager villager = context.getInitiator().getMinecraftEntity();
-                    villager.setMotion(AnimationArchetype.IDLE);
+                    villager.setMotion(AnimationArchetype.NONE);
                     this.finishEating(villager);
                     return StepResult.complete();
                 })
@@ -138,7 +138,7 @@ public class EatFoodBehavior extends VillagerStateMachineBehavior {
 
     @Override
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         villager.clearHeldItem();
         this.selectedFood = null;
         this.shouldConsume = false;

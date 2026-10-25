@@ -1,139 +1,81 @@
 package dev.breezes.settlements.domain.animation;
 
-import dev.breezes.settlements.domain.presentation.ArmConfiguration;
 import lombok.Getter;
 
 import javax.annotation.Nonnull;
 
+/**
+ * Coordinates live and observational animation for one villager, retaining its latest accepted snapshot.
+ * Steady-state advances and evaluations allocate nothing.
+ */
 public final class VillagerAnimator {
 
-    private final AnimationResolver animationResolver;
+    private final VillagerAnimationPipeline pipeline;
+
+    /**
+     * The observation the next advance reads.
+     */
     @Getter
-    private AnimationArchetype lastSeenArchetype;
+    private final VillagerAnimationObservation observation = new VillagerAnimationObservation();
+
+    /**
+     * The evaluation of the last accepted sample, at rest until the first advance.
+     */
     @Getter
-    private byte lastSeenGeneration;
-    private AnimationSelectionContext lastResolvedContext;
-    private final LayerStack layerStack;
+    private final VillagerAnimationSnapshot snapshot = new VillagerAnimationSnapshot();
 
-    // Sleep is a vanilla-synced state read off the client, not a motion-plane archetype, so it rides
-    // above the whole base/locomotion/idle-life/action fold rather than occupying a layer within it.
-    private final KeyframeAnimation sleepAnimation;
-    private boolean sleeping;
-    private long sleepStartGameTime;
+    private boolean sampleAccepted;
+    private long acceptedAgeTicks;
+    private float acceptedPartialTicks;
 
-    public VillagerAnimator(@Nonnull AnimationResolver animationResolver,
-                            @Nonnull LayerStackAnimators animators,
-                            int entityId) {
-        this.animationResolver = animationResolver;
-        this.lastSeenArchetype = AnimationArchetype.IDLE;
-        this.lastSeenGeneration = 0;
-        this.lastResolvedContext = AnimationSelectionContext.generic();
-        this.layerStack = new LayerStack(
-                animationResolver.resolve(AnimationArchetype.IDLE, AnimationSelectionContext.generic()),
-                animators,
-                entityId);
-        this.sleepAnimation = animationResolver.resolve(AnimationArchetype.SLEEP, AnimationSelectionContext.generic());
-        this.sleeping = false;
-        this.sleepStartGameTime = 0L;
+    public VillagerAnimator(@Nonnull VillagerAnimationPipeline pipeline) {
+        this.pipeline = pipeline;
     }
 
     /**
-     * Polls the villager's vanilla sleep state each frame. Entering sleep restarts the loop phase so
-     * the breathing cycle always begins from the neutral keyframe rather than mid-breath.
+     * Whether this partial tick is eligible for live advancement. Held-still entities are always eligible; other
+     * entities require a partial tick below one.
+     *
+     * @param heldStill whether the world holds the entity still this frame
      */
-    public void setSleeping(boolean sleeping, long gameTime) {
-        if (sleeping && !this.sleeping) {
-            this.sleepStartGameTime = gameTime;
-        }
-        this.sleeping = sleeping;
-    }
-
-    public void onMotionChanged(@Nonnull AnimationArchetype newArchetype,
-                                byte newGeneration,
-                                @Nonnull AnimationSelectionContext context,
-                                long gameTime) {
-        if (newArchetype == this.lastSeenArchetype && newGeneration == this.lastSeenGeneration) {
-            return;
-        }
-
-        boolean generationChanged = newGeneration != this.lastSeenGeneration;
-        KeyframeAnimation resolvedAnimation = this.animationResolver.resolve(newArchetype, context);
-        if (newArchetype == AnimationArchetype.IDLE) {
-            this.layerStack.clearAction(gameTime);
-        } else if (generationChanged) {
-            this.layerStack.triggerAction(resolvedAnimation, gameTime);
-        } else {
-            this.layerStack.setSustainedAction(resolvedAnimation, gameTime);
-        }
-        this.lastSeenArchetype = newArchetype;
-        this.lastSeenGeneration = newGeneration;
-        this.lastResolvedContext = context;
+    public static boolean isLiveSample(float partialTicks, boolean heldStill) {
+        return heldStill || partialTicks < 1.0F;
     }
 
     /**
-     * Re-resolves the current animation when the item category catches up after archetype sync.
-     * The archetype sync (SynchedEntityData) arrives before the equipment sync
-     * (ClientboundSetEquipmentPacket), so the first resolution may use GENERIC. This method
-     * corrects that on the next frame without treating it as an archetype change.
+     * Advances to the observation's sample key and returns this animator's reusable snapshot. A key equal to or earlier
+     * than the last accepted one returns the existing snapshot unchanged, even if other observation fields differ.
      */
-    public void tickContext(@Nonnull AnimationSelectionContext context, long gameTime) {
-        if (context.equals(this.lastResolvedContext)) {
-            return;
+    public VillagerAnimationSnapshot advance() {
+        long ageTicks = this.observation.getAgeTicks();
+        float partialTicks = this.observation.getPartialTicks();
+        // Repeated or older samples must not advance animation twice or rewind its committed state
+        if (this.sampleAccepted && (ageTicks < this.acceptedAgeTicks
+                || (ageTicks == this.acceptedAgeTicks && partialTicks <= this.acceptedPartialTicks))) {
+            return this.snapshot;
         }
-        this.lastResolvedContext = context;
-
-        if (this.lastSeenArchetype == AnimationArchetype.IDLE || !this.layerStack.hasAction()) {
-            return;
-        }
-
-        KeyframeAnimation reresolved = this.animationResolver.resolve(this.lastSeenArchetype, context);
-        this.layerStack.setSustainedAction(reresolved, gameTime);
+        this.sampleAccepted = true;
+        this.acceptedAgeTicks = ageTicks;
+        this.acceptedPartialTicks = partialTicks;
+        this.pipeline.advance(this.observation, this.snapshot);
+        return this.snapshot;
     }
 
     /**
-     * Arm config is a discrete render state that snaps to the incoming animation at transition
-     * rather than blending — geometry visibility cannot be crossfaded, so we always read the
-     * current (not outgoing) animation's declared config.
+     * Fills the given snapshot from the committed animation state at the supplied observation. The look has no
+     * smoothing but retains its yaw limit, the nose has no procedural lag, and the brow reacts as fully as its look
+     * residual calls for. Leaves live animation state and this animator's own observation and snapshot unchanged.
+     *
+     * @throws IllegalArgumentException if the given snapshot is this animator's own
      */
-    public ArmConfiguration currentArmConfiguration(long gameTime,
-                                                    float partialTicks,
-                                                    @Nonnull LocomotionAnimationContext locomotionContext) {
-        if (this.sleeping) {
-            return this.sleepArmConfiguration(gameTime, partialTicks);
+    public void evaluateObservationally(@Nonnull VillagerAnimationObservation observation,
+                                        @Nonnull VillagerAnimationSnapshot snapshot) {
+        // Avoid varargs validation helpers so observational evaluations allocate no argument array
+        if (snapshot == this.snapshot) {
+            throw new IllegalArgumentException(
+                    "An observational evaluation must not overwrite the animator's snapshot");
         }
-        return this.layerStack.armConfiguration(gameTime, partialTicks, locomotionContext);
-    }
-
-    public AnimationFrame sample(long gameTime,
-                                 float partialTicks,
-                                 @Nonnull LocomotionAnimationContext locomotionContext,
-                                 boolean umbrellaShouldDeploy) {
-        if (this.sleeping) {
-            // Sleep replaces the body pose outright, but the umbrella is still advanced and composed --
-            // against a gate held shut, so a villager going to bed stows it rather than losing it mid-air
-            return this.layerStack.composeUmbrellaOver(this.sleepFrame(gameTime, partialTicks), gameTime, partialTicks, false);
-        }
-        return this.layerStack.sample(gameTime, partialTicks, locomotionContext, umbrellaShouldDeploy);
-    }
-
-    /**
-     * Whether the umbrella attachment should be rendered this frame.
-     */
-    public boolean isUmbrellaVisible(long gameTime, float partialTicks) {
-        return this.layerStack.isUmbrellaVisible(gameTime, partialTicks);
-    }
-
-    private AnimationFrame sleepFrame(long gameTime, float partialTicks) {
-        return this.sleepAnimation.sample(this.sleepElapsedTicks(gameTime, partialTicks));
-    }
-
-    private ArmConfiguration sleepArmConfiguration(long gameTime, float partialTicks) {
-        return this.sleepAnimation.armConfigurationAt(this.sleepElapsedTicks(gameTime, partialTicks))
-                .orElse(ArmConfiguration.BOTH_CROSSED);
-    }
-
-    private float sleepElapsedTicks(long gameTime, float partialTicks) {
-        return Math.max(0.0F, (gameTime - this.sleepStartGameTime) + partialTicks);
+        this.pipeline.evaluateObservationally(observation, snapshot);
     }
 
 }

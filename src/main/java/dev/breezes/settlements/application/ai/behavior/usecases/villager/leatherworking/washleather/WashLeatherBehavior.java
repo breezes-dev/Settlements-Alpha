@@ -150,7 +150,7 @@ public class WashLeatherBehavior extends VillagerStateMachineBehavior {
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
         villager.getNavigationManager().stop();
         villager.clearHeldItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
 
         // Teardown obligations (leather display removal, cauldron restoration) are handled by TeardownScope.teardownAll()
         this.cauldron = null;

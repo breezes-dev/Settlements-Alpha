@@ -38,8 +38,8 @@ public final class InMemoryAnimationLibrary implements AnimationLibrary {
     }
 
     @Override
-    public KeyframeAnimation resolve(@Nonnull AnimationArchetype archetype, @Nonnull ItemCategory category) {
-        KeyframeAnimation exact = this.animations.get(AnimationKey.of(archetype, category));
+    public KeyframeAnimation resolve(@Nonnull AnimationArchetype archetype, @Nonnull AnimationSelectionContext context) {
+        KeyframeAnimation exact = this.animations.get(AnimationKey.of(archetype, context.mainHandCategory()));
         if (exact != null) {
             return exact;
         }
@@ -49,7 +49,7 @@ public final class InMemoryAnimationLibrary implements AnimationLibrary {
             return generic;
         }
 
-        KeyframeAnimation idle = this.animations.get(AnimationKey.of(AnimationArchetype.IDLE, ItemCategory.GENERIC));
+        KeyframeAnimation idle = this.animations.get(AnimationKey.of(AnimationArchetype.NONE, ItemCategory.GENERIC));
         return idle == null ? this.idleAnimation : idle;
     }
 

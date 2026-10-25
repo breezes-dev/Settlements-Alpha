@@ -2,7 +2,7 @@ package dev.breezes.settlements.infrastructure.minecraft.blocks.ballista;
 
 import dev.breezes.settlements.bootstrap.registry.blockentities.BlockEntityTypeRegistry;
 import dev.breezes.settlements.bootstrap.registry.items.ItemRegistry;
-import dev.breezes.settlements.domain.animation.AnimationFrame;
+import dev.breezes.settlements.domain.animation.AnimationPose;
 import dev.breezes.settlements.domain.ballista.BallistaAim;
 import dev.breezes.settlements.domain.ballista.BallistaAnimator;
 import dev.breezes.settlements.domain.ballista.BallistaIntentPrediction;
@@ -583,11 +583,14 @@ public class BallistaBlockEntity extends BlockEntity {
     }
 
     /**
-     * The rig's clip-driven pose for a frame drawn the given fraction of a tick after this client's latest tick.
+     * Replaces the pose with the rig's clip-driven pose for a frame drawn the given fraction of a tick after this
+     * client's latest tick.
+     *
+     * @throws IllegalArgumentException if the pose is not on the ballista rig
      */
     @ClientSide
-    AnimationFrame sampleAnimation(float partialTick) {
-        return this.animator.sample(this.machineState, this.clientTicks, partialTick);
+    void sampleAnimationInto(@Nonnull AnimationPose pose, float partialTick) {
+        this.animator.sampleInto(pose, this.machineState, this.clientTicks, partialTick);
     }
 
     /**

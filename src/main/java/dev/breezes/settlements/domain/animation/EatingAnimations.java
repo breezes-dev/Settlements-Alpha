@@ -24,6 +24,10 @@ public final class EatingAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(4)
                 .blendOutTicks(4)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
+                // The eyes stay cast down on the food rather than following the look
+                .suppresses(SuppressibleComponent.GAZE)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 // Arms rise to eating height and hold, returning to rest at the final tick.
                 .track(AnimationTrack.<Vector3f>builder()
@@ -51,7 +55,7 @@ public final class EatingAnimations {
                         .build())
                 // Head tilts down to meet the food then returns upright at the end.
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(10, RotationUtil.degrees(10.0f, 0.0f, 0.0f), Easing.CUBIC),
@@ -167,13 +171,13 @@ public final class EatingAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, -7.5f, 0.0f), Easing.LINEAR)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 7.5f, 0.0f), Easing.LINEAR)
                         ))

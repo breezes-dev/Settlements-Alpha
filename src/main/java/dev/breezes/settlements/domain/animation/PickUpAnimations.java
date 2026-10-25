@@ -23,6 +23,8 @@ public final class PickUpAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(4)
                 .blendOutTicks(4)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.ARMS_CROSSED_ROTATION)
@@ -45,7 +47,7 @@ public final class PickUpAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(4, RotationUtil.degrees(5.0f, 0.0f, 0.0f), Easing.CUBIC),
@@ -65,7 +67,7 @@ public final class PickUpAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(4, RotationUtil.degrees(-5.0f, 0.0f, 0.0f), Easing.CUBIC),
@@ -113,24 +115,12 @@ public final class PickUpAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(11, RotationUtil.degrees(15.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(14, RotationUtil.degrees(15.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(19, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC)
-                        ))
-                        .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.0, 0.0), Easing.LINEAR)
-                        ))
-                        .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.0, 0.0), Easing.LINEAR)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()

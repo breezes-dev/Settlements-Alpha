@@ -1,8 +1,6 @@
 package dev.breezes.settlements.infrastructure.rendering.attachment;
 
-import dev.breezes.settlements.di.ClientSessionComponent;
-import dev.breezes.settlements.di.SettlementsDagger;
-import dev.breezes.settlements.domain.animation.VillagerAnimator;
+import dev.breezes.settlements.domain.animation.VillagerAnimationSnapshot;
 import dev.breezes.settlements.domain.attachment.AttachmentContent;
 import dev.breezes.settlements.domain.attachment.AttachmentProvider;
 import dev.breezes.settlements.domain.attachment.AttachmentSlot;
@@ -23,16 +21,13 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PACKAGE, onConstructor_ = @Inject)
 public final class UmbrellaAttachmentProvider implements AttachmentProvider {
 
+    /**
+     * The umbrella while the snapshot shows it, posed with the snapshot's umbrella pose; otherwise nothing.
+     */
     @Override
-    public List<RenderableAttachment> attachmentsFor(@Nonnull BaseVillager villager, float partialTicks) {
-        // A villager drawn without a world/client session has no animator, so the umbrella stays stowed
-        ClientSessionComponent session = SettlementsDagger.clientSessionOrNull();
-        if (session == null) {
-            return List.of();
-        }
-
-        VillagerAnimator animator = villager.getAnimator(session.villagerAnimatorFactory());
-        if (!animator.isUmbrellaVisible(villager.level().getGameTime(), partialTicks)) {
+    public List<RenderableAttachment> attachmentsFor(@Nonnull BaseVillager villager,
+                                                     @Nonnull VillagerAnimationSnapshot snapshot) {
+        if (!snapshot.isUmbrellaVisible()) {
             return List.of();
         }
 
@@ -41,7 +36,7 @@ public final class UmbrellaAttachmentProvider implements AttachmentProvider {
         ResourceLocation texture = UmbrellaModel.textureFor(UmbrellaPattern.forVillager(uuid));
         return List.of(RenderableAttachment.builder()
                 .slot(slot)
-                .content(new AttachmentContent.ModelContent(UmbrellaModel.ID, texture))
+                .content(new AttachmentContent.ModelContent(UmbrellaModel.ID, texture, snapshot.getUmbrellaPose()))
                 .build());
     }
 

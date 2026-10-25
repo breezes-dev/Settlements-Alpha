@@ -154,7 +154,7 @@ public class BreedAnimalsBehavior extends VillagerStateMachineBehavior {
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
         villager.getNavigationManager().stop();
         villager.clearHeldItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
 
         // Only claim if we actually started feeding; otherwise we'd grab unrelated nearby babies
         if (this.breedTarget1 != null) {

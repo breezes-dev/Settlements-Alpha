@@ -13,6 +13,12 @@ import java.util.function.ToDoubleFunction;
 
 public class RandomUtil {
 
+    /**
+     * Shared source for draws whose bounds and probabilities matter, but whose exact sequence need not repeat.
+     * Calls from unrelated features consume the same sequence, so results may depend on their call order.
+     * Use a caller-owned generator for seeded world generation or other decisions that must be reproducible.
+     * Do not reseed this shared source.
+     */
     public static final Random RANDOM = new Random();
 
     /**

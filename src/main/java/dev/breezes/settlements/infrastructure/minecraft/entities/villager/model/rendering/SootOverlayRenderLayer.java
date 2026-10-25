@@ -16,7 +16,7 @@ import javax.annotation.Nonnull;
  * The texture already confines soot pixels to the head UV region, so no model-part
  * masking is needed — re-rendering the full model with the soot texture is correct and safe.
  */
-public final class SootOverlayRenderLayer extends RenderLayer<BaseVillager, SettlementsVillagerModel<BaseVillager>> {
+public final class SootOverlayRenderLayer extends RenderLayer<BaseVillager, SettlementsVillagerModel> {
 
     public SootOverlayRenderLayer(@Nonnull SettlementsVillagerRenderer renderer) {
         super(renderer);

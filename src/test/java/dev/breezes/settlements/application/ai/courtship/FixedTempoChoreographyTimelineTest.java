@@ -10,8 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class FixedTempoChoreographyTimelineTest {
 
     private static final CourtshipBeat BEAT_A = new CourtshipBeat(AnimationArchetype.INTERACT, AnimationArchetype.POINT, null);
-    private static final CourtshipBeat BEAT_B = new CourtshipBeat(AnimationArchetype.IDLE, AnimationArchetype.EAT, null);
-    private static final CourtshipBeat BEAT_C = new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.IDLE, null);
+    private static final CourtshipBeat BEAT_B = new CourtshipBeat(AnimationArchetype.NONE, AnimationArchetype.EAT, null);
+    private static final CourtshipBeat BEAT_C = new CourtshipBeat(AnimationArchetype.POINT, AnimationArchetype.NONE, null);
 
     @Test
     void beatCount_returnsListSize() {

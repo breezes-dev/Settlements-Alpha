@@ -12,6 +12,7 @@ import dev.breezes.settlements.domain.inventory.BackpackEntry;
 import dev.breezes.settlements.domain.personality.OriginType;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.UiChannel;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.ServerBoundCloseUiPacket;
+import dev.breezes.settlements.infrastructure.rendering.animation.ObservationalVillagerRenderFlag;
 import dev.breezes.settlements.presentation.ui.framework.Elements;
 import dev.breezes.settlements.presentation.ui.framework.Insets;
 import dev.breezes.settlements.presentation.ui.framework.LayoutScreen;
@@ -105,6 +106,7 @@ public class VillagerStatsScreen extends LayoutScreen {
     @Getter
     private final long sessionId;
     private final UiClientState uiClientState;
+    private final ObservationalVillagerRenderFlag observationalRenderFlag;
     private final int villagerEntityId;
     @Nullable
     private VillagerStatsSnapshot statsSnapshot;
@@ -146,11 +148,13 @@ public class VillagerStatsScreen extends LayoutScreen {
 
     public VillagerStatsScreen(long sessionId,
                                @Nonnull UiClientState uiClientState,
+                               @Nonnull ObservationalVillagerRenderFlag observationalRenderFlag,
                                int villagerEntityId) {
         super(Component.translatable(TITLE_KEY));
 
         this.sessionId = sessionId;
         this.uiClientState = uiClientState;
+        this.observationalRenderFlag = observationalRenderFlag;
         this.villagerEntityId = villagerEntityId;
         this.statsSnapshot = null;
         this.inventorySnapshot = null;
@@ -371,7 +375,7 @@ public class VillagerStatsScreen extends LayoutScreen {
     private UIElement buildVillagerModelArea() {
         // Performance note: Entity model rendering is the most expensive element.
         // Candidate for framebuffer caching if profiling shows issues.
-        return new VillagerModelElement(() -> this.villagerEntityId, theme);
+        return new VillagerModelElement(() -> this.villagerEntityId, this.observationalRenderFlag, theme);
     }
 
     private UIElement buildHpBar() {

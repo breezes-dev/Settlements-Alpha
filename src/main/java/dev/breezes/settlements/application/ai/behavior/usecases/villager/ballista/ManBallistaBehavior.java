@@ -258,7 +258,7 @@ public class ManBallistaBehavior extends VillagerStateMachineBehavior {
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
         // The machine is left as it stands, wound or loaded for whoever operates it next
         villager.getNavigationManager().stop();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         villager.clearHeldItem();
         villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
         if (this.machine != null) {
@@ -416,7 +416,7 @@ public class ManBallistaBehavior extends VillagerStateMachineBehavior {
             if (machine.settledStage() == BallistaStateMachine.Stage.WINDING) {
                 return StepResult.noOp();
             }
-            villager.setMotion(AnimationArchetype.IDLE);
+            villager.setMotion(AnimationArchetype.NONE);
             return resumeFromMachineState(villager);
         }
 

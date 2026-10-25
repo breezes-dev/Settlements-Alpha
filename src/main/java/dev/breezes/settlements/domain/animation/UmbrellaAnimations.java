@@ -24,8 +24,6 @@ public final class UmbrellaAnimations {
                 .id(ResourceLocationUtil.mod("animation/umbrella/deploy"))
                 .durationTicks(DEPLOY_DURATION_TICKS)
                 .loopMode(LoopMode.ONCE)
-                .blendInTicks(2)
-                .blendOutTicks(2)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 .track(rotation(UmbrellaAnimationTargets.EAST_ROTATION,
                         at(0, RotationUtil.degrees(0.0f, 0.0f, 65.0f)),
@@ -95,8 +93,6 @@ public final class UmbrellaAnimations {
                 .id(ResourceLocationUtil.mod("animation/umbrella/undeploy"))
                 .durationTicks(UNDEPLOY_DURATION_TICKS)
                 .loopMode(LoopMode.ONCE)
-                .blendInTicks(0)
-                .blendOutTicks(0)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 .track(rotation(UmbrellaAnimationTargets.EAST_ROTATION,
                         at(0, RotationUtil.degrees(0.0f, 0.0f, 0.0f)),

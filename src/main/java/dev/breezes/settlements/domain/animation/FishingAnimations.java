@@ -35,6 +35,8 @@ public final class FishingAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(BLEND_IN_TICKS)
                 .blendOutTicks(BLEND_OUT_TICKS)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 // Arms wind back then snap through neutral to the forward release peak
                 .track(AnimationTrack.<Vector3f>builder()
@@ -59,7 +61,7 @@ public final class FishingAnimations {
                         .build())
                 // Left leg dips back during wind-up, absorbs the forward transfer
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, -7.5f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(10, RotationUtil.degrees(5.0f, -7.5f, 0.0f), Easing.CUBIC),
@@ -77,7 +79,7 @@ public final class FishingAnimations {
                         .build())
                 // Right leg mirrors left for a balanced stance transfer
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 7.5f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(12, RotationUtil.degrees(-2.5f, 7.5f, 0.0f), Easing.CUBIC),
@@ -133,7 +135,7 @@ public final class FishingAnimations {
                 // Head snaps down on wind-up then settles a beat after the throw; the clip owns
                 // look direction for its own duration, which is why this uses the ABSOLUTE override
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(3, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(13, RotationUtil.degrees(-20.0f, 10.0f, 12.5f), Easing.CUBIC),
@@ -154,10 +156,10 @@ public final class FishingAnimations {
                 .track(AnimationTrack.<Vec3>builder()
                         .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
                         .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.0, 0.0), Easing.CUBIC),
-                                new Keyframe<>(11, new Vec3(0.1, 0.1, 0.0), Easing.CUBIC),
-                                new Keyframe<>(20, new Vec3(0.1, 0.1, 0.0), Easing.CUBIC),
-                                new Keyframe<>(30, new Vec3(0.1, 0.0, 0.0), Easing.CUBIC)
+                                new Keyframe<>(0, new Vec3(0.0, 0.0, 0.0), Easing.CUBIC),
+                                new Keyframe<>(11, new Vec3(0.0, 0.1, 0.0), Easing.CUBIC),
+                                new Keyframe<>(20, new Vec3(0.0, 0.1, 0.0), Easing.CUBIC),
+                                new Keyframe<>(30, new Vec3(0.0, 0.0, 0.0), Easing.CUBIC)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
@@ -172,10 +174,10 @@ public final class FishingAnimations {
                 .track(AnimationTrack.<Vec3>builder()
                         .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
                         .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.0, 0.0), Easing.CUBIC),
-                                new Keyframe<>(11, new Vec3(-0.1, 0.1, 0.0), Easing.CUBIC),
-                                new Keyframe<>(20, new Vec3(-0.1, 0.1, 0.0), Easing.CUBIC),
-                                new Keyframe<>(30, new Vec3(-0.1, 0.0, 0.0), Easing.CUBIC)
+                                new Keyframe<>(0, new Vec3(0.0, 0.0, 0.0), Easing.CUBIC),
+                                new Keyframe<>(11, new Vec3(0.0, 0.1, 0.0), Easing.CUBIC),
+                                new Keyframe<>(20, new Vec3(0.0, 0.1, 0.0), Easing.CUBIC),
+                                new Keyframe<>(30, new Vec3(0.0, 0.0, 0.0), Easing.CUBIC)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
@@ -202,6 +204,8 @@ public final class FishingAnimations {
                 .loopMode(LoopMode.LOOP)
                 .blendInTicks(BLEND_IN_TICKS)
                 .blendOutTicks(BLEND_OUT_TICKS)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 // Crossed arms hold the rod out with a subtle breathing sway
                 .track(AnimationTrack.<Vector3f>builder()
@@ -284,7 +288,7 @@ public final class FishingAnimations {
                 // Head tracks the same breath cycle as the nose; the clip owns look direction
                 // for the whole idle, which is why this is the ABSOLUTE override rather than additive
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(5.76f, 0.0f, 0.0f), Easing.LINEAR),
                                 new Keyframe<>(3, RotationUtil.degrees(6.81f, 0.0f, 0.0f), Easing.LINEAR),
@@ -319,20 +323,8 @@ public final class FishingAnimations {
                         .build())
                 // Planted, weight-shifted stance held for the whole idle — odd non-round values
                 // are authored, not approximations
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.0, 0.0), Easing.LINEAR)
-                        ))
-                        .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.0, 0.0), Easing.LINEAR)
-                        ))
-                        .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(4.992f, -4.9681f, 0.0f), Easing.LINEAR)
                         ))
@@ -344,7 +336,7 @@ public final class FishingAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(-2.5f, 7.476f, 0.0f), Easing.LINEAR)
                         ))
@@ -369,6 +361,10 @@ public final class FishingAnimations {
                 .loopMode(LoopMode.LOOP)
                 .blendInTicks(BLEND_IN_TICKS)
                 .blendOutTicks(BLEND_OUT_TICKS)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
+                // The lids hold the eyes wide, which an owning blink would otherwise close fully
+                .suppresses(SuppressibleComponent.BLINK)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.ARMS_CROSSED_ROTATION)
@@ -392,7 +388,7 @@ public final class FishingAnimations {
                         .build())
                 // Braced stance held for the whole fight
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(-7.5f, 0.0f, 0.0f), Easing.LINEAR)
                         ))
@@ -404,7 +400,7 @@ public final class FishingAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(10.0f, 0.0f, 0.0f), Easing.LINEAR)
                         ))
@@ -480,7 +476,7 @@ public final class FishingAnimations {
                         .build())
                 // Head snaps in counterpoint to torso; owns look direction for the whole fight
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(-6.57f, 0.0f, 0.0f), Easing.LINEAR),
                                 new Keyframe<>(1, RotationUtil.degrees(-4.26f, 0.0f, 0.0f), Easing.LINEAR),
@@ -531,9 +527,9 @@ public final class FishingAnimations {
                 .track(AnimationTrack.<Vec3>builder()
                         .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
                         .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.15, 0.0), Easing.CUBIC),
-                                new Keyframe<>(12, new Vec3(0.1, 0.05, 0.0), Easing.CUBIC),
-                                new Keyframe<>(24, new Vec3(0.1, 0.15, 0.0), Easing.CUBIC)
+                                new Keyframe<>(0, new Vec3(0.0, 0.15, 0.0), Easing.CUBIC),
+                                new Keyframe<>(12, new Vec3(0.0, 0.05, 0.0), Easing.CUBIC),
+                                new Keyframe<>(24, new Vec3(0.0, 0.15, 0.0), Easing.CUBIC)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
@@ -557,9 +553,9 @@ public final class FishingAnimations {
                 .track(AnimationTrack.<Vec3>builder()
                         .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
                         .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.15, 0.0), Easing.CUBIC),
-                                new Keyframe<>(12, new Vec3(-0.1, 0.05, 0.0), Easing.CUBIC),
-                                new Keyframe<>(24, new Vec3(-0.1, 0.15, 0.0), Easing.CUBIC)
+                                new Keyframe<>(0, new Vec3(0.0, 0.15, 0.0), Easing.CUBIC),
+                                new Keyframe<>(12, new Vec3(0.0, 0.05, 0.0), Easing.CUBIC),
+                                new Keyframe<>(24, new Vec3(0.0, 0.15, 0.0), Easing.CUBIC)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
@@ -581,6 +577,10 @@ public final class FishingAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(BLEND_IN_TICKS)
                 .blendOutTicks(BLEND_OUT_TICKS)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
+                // The lids hold the eyes wide, which an owning blink would otherwise close fully
+                .suppresses(SuppressibleComponent.BLINK)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.ARMS_CROSSED_ROTATION)
@@ -597,7 +597,7 @@ public final class FishingAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(-7.5f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(3, RotationUtil.degrees(0.0f, -7.5f, -1.0f), Easing.CUBIC)
@@ -611,7 +611,7 @@ public final class FishingAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(10.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(3, RotationUtil.degrees(0.0f, 10.0f, 1.0f), Easing.CUBIC)
@@ -646,7 +646,7 @@ public final class FishingAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(-16.57f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(4, RotationUtil.degrees(-1.04f, 0.0f, 0.0f), Easing.CUBIC)
@@ -676,8 +676,8 @@ public final class FishingAnimations {
                 .track(AnimationTrack.<Vec3>builder()
                         .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
                         .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.15, 0.0), Easing.CUBIC),
-                                new Keyframe<>(3, new Vec3(0.1, 0.0, 0.0), Easing.CUBIC)
+                                new Keyframe<>(0, new Vec3(0.0, 0.15, 0.0), Easing.CUBIC),
+                                new Keyframe<>(3, new Vec3(0.0, 0.0, 0.0), Easing.CUBIC)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
@@ -704,8 +704,8 @@ public final class FishingAnimations {
                 .track(AnimationTrack.<Vec3>builder()
                         .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
                         .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.15, 0.0), Easing.CUBIC),
-                                new Keyframe<>(3, new Vec3(-0.1, 0.0, 0.0), Easing.CUBIC)
+                                new Keyframe<>(0, new Vec3(0.0, 0.15, 0.0), Easing.CUBIC),
+                                new Keyframe<>(3, new Vec3(0.0, 0.0, 0.0), Easing.CUBIC)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()

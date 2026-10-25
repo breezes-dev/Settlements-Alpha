@@ -11,14 +11,8 @@ import net.minecraft.client.renderer.RenderType;
 import javax.annotation.Nonnull;
 
 /**
- * Wraps {@link OutlineBufferSource} so an entity renderer only ever writes into the outline pass.
- * <p>
- * {@link OutlineBufferSource#getBuffer} takes the non-outline branch for any render type that isn't already
- * an outline type, which writes into both the outline buffer and the wrapped main buffer. Since vanilla has
- * already drawn every on-screen entity for this frame by the time a highlight provider runs, handing an
- * entity renderer the raw {@link OutlineBufferSource} would duplicate that main-buffer draw at identical
- * coordinates — overdraw and z-fighting. This wrapper resolves {@link RenderType#outline()} first so only the
- * outline generator is ever requested.
+ * Wraps {@link OutlineBufferSource} to restrict supplementary entity renders to the outline pass without writing to
+ * the main buffer.
  */
 @ClientSide
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -30,14 +24,18 @@ final class OutlineOnlyBufferSource implements MultiBufferSource, SupplementaryE
         return new OutlineOnlyBufferSource(outlineBufferSource);
     }
 
+    /**
+     * Accepts outline render types directly and maps other types to their outline variant, discarding vertices when no
+     * variant exists.
+     */
     @Override
     public VertexConsumer getBuffer(@Nonnull RenderType renderType) {
         if (renderType.isOutline()) {
             return outlineBufferSource.getBuffer(renderType);
         }
 
-        // A render type with no outline mapping contributes nothing to a silhouette
-        // Dropping it keeps this wrapper outline-only instead of reintroducing the duplicate main-buffer draw.
+        // Passing through a non-outline type would also write to the main buffer, risking duplicate draws and
+        // z-fighting.
         return renderType.outline()
                 .map(outlineBufferSource::getBuffer)
                 .orElse(NoOpVertexConsumer.INSTANCE);

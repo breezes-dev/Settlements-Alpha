@@ -1,17 +1,15 @@
 package dev.breezes.settlements.infrastructure.minecraft.entities.villager.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import dev.breezes.settlements.domain.ai.navigation.NavigationType;
-import dev.breezes.settlements.domain.animation.AnimationFrame;
-import dev.breezes.settlements.domain.animation.AnimationTargets;
-import dev.breezes.settlements.domain.animation.LocomotionAnimationContext;
-import dev.breezes.settlements.domain.animation.VillagerAnimator;
+import dev.breezes.settlements.domain.animation.VillagerAnimationRig;
+import dev.breezes.settlements.domain.animation.VillagerAnimationSnapshot;
+import dev.breezes.settlements.domain.animation.VillagerEye;
 import dev.breezes.settlements.domain.presentation.ArmConfiguration;
 import dev.breezes.settlements.domain.presentation.ArmPose;
 import dev.breezes.settlements.domain.presentation.ModelPartRef;
+import dev.breezes.settlements.infrastructure.minecraft.entities.villager.BaseVillager;
+import dev.breezes.settlements.infrastructure.rendering.animation.ModelPartRigBinding;
 import dev.breezes.settlements.shared.util.ResourceLocationUtil;
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.client.model.HeadedModel;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.VillagerHeadModel;
@@ -23,26 +21,44 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.npc.AbstractVillager;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import org.apache.commons.lang3.Validate;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * Villager model posed from animation snapshots, with no pose carried over between setupAnim calls.
+ */
 @OnlyIn(Dist.CLIENT)
-@Getter
-public class SettlementsVillagerModel<T extends Entity> extends HierarchicalModel<T> implements HeadedModel, VillagerHeadModel {
+public class SettlementsVillagerModel
+        extends HierarchicalModel<BaseVillager>
+        implements HeadedModel, VillagerHeadModel {
 
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(ResourceLocationUtil.mod("base_villager"), "main");
 
-    private static final float UNHAPPY_HEAD_ROLL_AMPLITUDE = 0.3F;
-    private static final float UNHAPPY_HEAD_ROLL_FREQUENCY = 0.45F;
-    private static final float UNHAPPY_HEAD_PITCH_RAD = 0.4F;
+    // The side of the square the pupil's texture covers, centered on the pupil's origin
+    private static final float PUPIL_TEXTURE_SIZE = 1.0F;
+
+    /**
+     * Supplies the snapshot the model applies in one setupAnim call, given the values vanilla passes to it.
+     */
+    @FunctionalInterface
+    public interface SnapshotSource {
+
+        VillagerAnimationSnapshot snapshotForSetupAnim(@Nonnull BaseVillager villager,
+                                                       float limbSwing,
+                                                       float limbSwingAmount,
+                                                       float netHeadYaw,
+                                                       float headPitch);
+
+    }
+
+    private final SnapshotSource snapshotSource;
 
     private final ModelPart root;
     private final ModelPart villager;
@@ -80,19 +96,30 @@ public class SettlementsVillagerModel<T extends Entity> extends HierarchicalMode
     private final ModelPart leg_left;
     private final ModelPart leg_right;
     private final ModelPart feet_center_socket;
-    @Nullable
-    private AnimationFrame animationFrame;
-    private AnimationFrame resolvedAnimationFrame = AnimationFrame.EMPTY;
-    @Setter
-    private ArmConfiguration armConfiguration = ArmConfiguration.BOTH_CROSSED;
-    @Nullable
-    private VillagerAnimator animator;
-    private NavigationType locomotionNavigationType = NavigationType.STROLL;
-    private long animationGameTime;
-    private float animationPartialTicks;
-    private boolean shouldDeployUmbrella;
 
-    public SettlementsVillagerModel(ModelPart root) {
+    private final ModelPartRigBinding rigBinding;
+
+    // Cache the complete chains so applying a bone transform allocates nothing
+    private final ModelPart[][] chainsByBone;
+
+    // Kept out of the rendered hierarchy, so neither the reset nor the render ever reaches it
+    private final ModelPart drawnHead = new ModelPart(List.of(), Map.of());
+
+    // Scratch for composing the drawn head, so composing allocates nothing
+    private final Quaternionf composedRotation = new Quaternionf();
+    private final Quaternionf partRotation = new Quaternionf();
+    private final Vector3f composedOffset = new Vector3f();
+    private final Vector3f partOffset = new Vector3f();
+    private final Vector3f drawnHeadAngles = new Vector3f();
+
+    /**
+     * @param root           the baked layer's root
+     * @param snapshotSource supplies the snapshot each setupAnim applies
+     * @throws IllegalArgumentException if a model-part channel of the villager rig names a part the layer lacks, or a
+     *                                  part from the root down to the head has a rest rotation
+     */
+    public SettlementsVillagerModel(@Nonnull ModelPart root, @Nonnull SnapshotSource snapshotSource) {
+        this.snapshotSource = snapshotSource;
         this.root = root.getChild("root");
         this.villager = this.root.getChild("villager");
         this.torso = this.villager.getChild("torso");
@@ -130,8 +157,20 @@ public class SettlementsVillagerModel<T extends Entity> extends HierarchicalMode
         this.leg_right = this.legs.getChild("leg_right");
         this.feet_center_socket = this.legs.getChild("feet_center_socket");
 
+        // Rest rotations would make the drawn head disagree with the orientation represented by animation channels
+        requireNoRestRotation(this.root, "root");
+        requireNoRestRotation(this.villager, "villager");
+        requireNoRestRotation(this.torso, "torso");
+        requireNoRestRotation(this.head, "head");
+
         this.arms_crossed.visible = true;
         this.arms_straight.visible = true;
+
+        this.rigBinding = new ModelPartRigBinding(VillagerAnimationRig.RIG, this.root, this::getAnyDescendantWithName);
+        this.chainsByBone = new ModelPart[ModelPartRef.values().length][];
+        for (ModelPartRef bone : ModelPartRef.values()) {
+            this.chainsByBone[bone.ordinal()] = this.chainTo(bone);
+        }
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -154,17 +193,21 @@ public class SettlementsVillagerModel<T extends Entity> extends HierarchicalMode
 
         PartDefinition eyelid_left = eye_left.addOrReplaceChild("eyelid_left", CubeListBuilder.create().texOffs(24, 4).addBox(-1.0F, -0.5F, -0.0625F, 2.0F, 1.0F, 1.0F, new CubeDeformation(0.01F)), PartPose.offset(0.0F, -1.0F, 0.0F));
 
-        PartDefinition eyeball_left = eye_left.addOrReplaceChild("eyeball_left", CubeListBuilder.create().texOffs(24, 6).addBox(-1.0F, -0.5F, -0.0125F, 2.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
+        PartDefinition eyeball_left = eye_left.addOrReplaceChild("eyeball_left", eyeballBox(),
+                PartPose.offset(0.0F, 0.0F, 0.0F));
 
-        PartDefinition pupil_left = eyeball_left.addOrReplaceChild("pupil_left", CubeListBuilder.create().texOffs(30, 4).addBox(-0.5F, -0.5F, -0.0375F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offset(-0.5F, 0.0F, 0.0F));
+        PartDefinition pupil_left = eyeball_left.addOrReplaceChild("pupil_left", pupilBox(),
+                PartPose.offset(VillagerEye.LEFT.pupilRestX(), VillagerEye.PUPIL_REST_Y, 0.0F));
 
         PartDefinition eye_right = eyes.addOrReplaceChild("eye_right", CubeListBuilder.create(), PartPose.offset(-4.0F, 0.0F, 0.0F));
 
         PartDefinition eyelid_right = eye_right.addOrReplaceChild("eyelid_right", CubeListBuilder.create().texOffs(24, 4).addBox(-1.0F, -0.5F, -0.0625F, 2.0F, 1.0F, 1.0F, new CubeDeformation(0.01F)), PartPose.offset(0.0F, -1.0F, 0.0F));
 
-        PartDefinition eyeball_right = eye_right.addOrReplaceChild("eyeball_right", CubeListBuilder.create().texOffs(24, 6).addBox(-1.0F, -0.5F, -0.0125F, 2.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.0F, 0.0F));
+        PartDefinition eyeball_right = eye_right.addOrReplaceChild("eyeball_right", eyeballBox(),
+                PartPose.offset(0.0F, 0.0F, 0.0F));
 
-        PartDefinition pupil_right = eyeball_right.addOrReplaceChild("pupil_right", CubeListBuilder.create().texOffs(30, 4).addBox(-0.5F, -0.5F, -0.0375F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offset(0.5F, 0.0F, 0.0F));
+        PartDefinition pupil_right = eyeball_right.addOrReplaceChild("pupil_right", pupilBox(),
+                PartPose.offset(VillagerEye.RIGHT.pupilRestX(), VillagerEye.PUPIL_REST_Y, 0.0F));
 
         PartDefinition nose = head.addOrReplaceChild("nose", CubeListBuilder.create().texOffs(0, 0).addBox(-1.0F, -1.0F, -2.0F, 2.0F, 4.0F, 2.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -2.0F, -4.0F));
 
@@ -219,218 +262,120 @@ public class SettlementsVillagerModel<T extends Entity> extends HierarchicalMode
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
 
+    private static CubeListBuilder eyeballBox() {
+        return CubeListBuilder.create().texOffs(24, 6).addBox(
+                -VillagerEye.WHITE_HALF_WIDTH, -VillagerEye.WHITE_HALF_HEIGHT, -0.0125F,
+                2.0F * VillagerEye.WHITE_HALF_WIDTH, 2.0F * VillagerEye.WHITE_HALF_HEIGHT, 1.0F,
+                CubeDeformation.NONE);
+    }
+
+    private static CubeListBuilder pupilBox() {
+        // Each pose reset returns a part's scale to one, so the rest size lives in the box rather than the part's scale
+        float faceGrowth = (VillagerEye.PUPIL_REST_SIZE - PUPIL_TEXTURE_SIZE) / 2.0F;
+        return CubeListBuilder.create().texOffs(30, 4).addBox(
+                -PUPIL_TEXTURE_SIZE / 2.0F, -PUPIL_TEXTURE_SIZE / 2.0F, -0.0375F,
+                PUPIL_TEXTURE_SIZE, PUPIL_TEXTURE_SIZE, 1.0F,
+                new CubeDeformation(faceGrowth, faceGrowth, 0.0F));
+    }
+
     @Override
     public ModelPart root() {
         return this.root;
     }
 
+    /**
+     * Returns a geometry-free part carrying the drawn head's full transform in model space as of the last setupAnim.
+     * Changing its visibility does not change the rendered head's visibility; use {@link #hatVisible} for that.
+     */
     @Override
-    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-        this.root().getAllParts().forEach(ModelPart::resetPose);
+    public ModelPart getHead() {
+        return this.drawnHead;
+    }
 
-        boolean isUnhappy = false;
-        if (entity instanceof AbstractVillager abstractVillager) {
-            isUnhappy = abstractVillager.getUnhappyCounter() > 0;
-        }
-
-        this.head.yRot = netHeadYaw * ((float) Math.PI / 180F);
-        this.head.xRot = headPitch * ((float) Math.PI / 180F);
-        if (isUnhappy) {
-            this.head.zRot = UNHAPPY_HEAD_ROLL_AMPLITUDE * Mth.sin(UNHAPPY_HEAD_ROLL_FREQUENCY * ageInTicks);
-            this.head.xRot = UNHAPPY_HEAD_PITCH_RAD;
-        } else {
-            this.head.zRot = 0.0F;
-        }
-
-        // Authored locomotion now owns leg motion. Leaving resetPose's neutral leg rotation at
-        // standstill avoids a second procedural gait fighting the distance-phased locomotion layer.
-        this.leg_right.xRot = 0.0F;
-        this.leg_left.xRot = 0.0F;
-        this.leg_right.yRot = 0.0F;
-        this.leg_left.yRot = 0.0F;
-
-        this.resolveAnimationFrame(limbSwing, limbSwingAmount);
-        this.applyAnimationFrame();
+    @Override
+    public void setupAnim(@Nonnull BaseVillager villager,
+                          float limbSwing,
+                          float limbSwingAmount,
+                          float ageInTicks,
+                          float netHeadYaw,
+                          float headPitch) {
+        VillagerAnimationSnapshot snapshot = this.snapshotSource.snapshotForSetupAnim(villager, limbSwing,
+                limbSwingAmount, netHeadYaw, headPitch);
+        this.rigBinding.resetToRest();
+        this.rigBinding.apply(snapshot.getPose());
+        this.showArmGeometry(snapshot.getArmConfiguration());
+        this.composeDrawnHead();
     }
 
     /**
-     * Applies the cumulative model-space transform from the root down to the requested socket.
-     * <p>
-     * Every chain must start at the root. Nothing the main render pass pushes survives into the layer
-     * pass — it enters model space only after the root's own push and pop have already closed — so
-     * reaching any socket means re-walking the full hierarchy rather than resuming partway down it.
+     * Applies the requested bone's cumulative transform to a pose stack currently in model space.
+     * Does not push or pop the stack.
      */
-    public void applyBoneTransform(PoseStack pose, ModelPartRef ref) {
-        switch (ref) {
-            case ROOT -> chain(pose, this.root);
-            case BODY -> chain(pose, this.root, this.villager, this.torso);
-            case HEAD -> chain(pose, this.root, this.villager, this.torso, this.head);
-            case ARMS -> chain(pose, this.root, this.villager, this.torso, this.arms, this.arms_crossed);
-            case ARMS_CROSSED_SOCKET ->
-                    chain(pose, this.root, this.villager, this.torso, this.arms, this.arms_crossed, this.arms_crossed_socket);
-            case ARM_STRAIGHT_RIGHT_SOCKET ->
-                    chain(pose, this.root, this.villager, this.torso, this.arms, this.arms_straight, this.arm_straight_right, this.arm_straight_right_socket);
-            case ARM_STRAIGHT_LEFT_SOCKET ->
-                    chain(pose, this.root, this.villager, this.torso, this.arms, this.arms_straight, this.arm_straight_left, this.arm_straight_left_socket);
-            // Legs branch off villager directly (not through torso), so the chain skips torso entirely.
-            case FEET_CENTER_SOCKET -> chain(pose, this.root, this.villager, this.legs, this.feet_center_socket);
-        }
-    }
-
-    private static void chain(PoseStack pose, ModelPart... parts) {
-        for (ModelPart part : parts) {
+    public void applyBoneTransform(@Nonnull PoseStack pose, @Nonnull ModelPartRef ref) {
+        // The input stack has no model-part transforms, so omitting any ancestor would misplace the bone
+        for (ModelPart part : this.chainsByBone[ref.ordinal()]) {
             part.translateAndRotate(pose);
         }
     }
 
-    public void prepareAnimation(@Nonnull VillagerAnimator animator,
-                                 @Nonnull NavigationType locomotionNavigationType,
-                                 long gameTime,
-                                 float partialTicks,
-                                 boolean shouldDeployUmbrella) {
-        this.animator = animator;
-        this.locomotionNavigationType = locomotionNavigationType;
-        this.animationGameTime = gameTime;
-        this.animationPartialTicks = partialTicks;
-        this.shouldDeployUmbrella = shouldDeployUmbrella;
-    }
-
-    public void clearPreparedAnimation() {
-        this.animator = null;
-        this.locomotionNavigationType = NavigationType.STROLL;
-        this.animationGameTime = 0L;
-        this.animationPartialTicks = 0.0F;
-        this.shouldDeployUmbrella = false;
-        this.resolvedAnimationFrame = AnimationFrame.EMPTY;
-        this.animationFrame = null;
-        this.armConfiguration = ArmConfiguration.BOTH_CROSSED;
-    }
-
-    private void resolveAnimationFrame(float limbSwing, float limbSwingAmount) {
-        if (this.animator == null) {
-            this.resolvedAnimationFrame = this.animationFrame == null ? AnimationFrame.EMPTY : this.animationFrame;
-            return;
-        }
-
-        LocomotionAnimationContext context = new LocomotionAnimationContext(
-                this.locomotionNavigationType,
-                limbSwing,
-                limbSwingAmount);
-        this.resolvedAnimationFrame = this.animator.sample(this.animationGameTime, this.animationPartialTicks,
-                context, this.shouldDeployUmbrella);
-        this.animationFrame = this.resolvedAnimationFrame;
-        this.armConfiguration = this.animator.currentArmConfiguration(this.animationGameTime, this.animationPartialTicks, context);
-    }
-
     @Override
     public void hatVisible(boolean visible) {
-        // The profession layer drives this; all three head-dress parts must toggle together
+        // Head geometry and its overlays must share visibility to avoid drawing either in isolation
         this.head.visible = visible;
         this.headwear.visible = visible;
         this.hat.visible = visible;
     }
 
-    private void applyAnimationFrame() {
-        AnimationFrame frame = this.animationFrame == null ? AnimationFrame.EMPTY : this.animationFrame;
+    private static void requireNoRestRotation(@Nonnull ModelPart part, @Nonnull String name) {
+        PartPose rest = part.getInitialPose();
+        Validate.isTrue(rest.xRot == 0.0F && rest.yRot == 0.0F && rest.zRot == 0.0F,
+                "Villager model part %s has a rest rotation of (%s, %s, %s), which animation's head frame cannot see",
+                name, rest.xRot, rest.yRot, rest.zRot);
+    }
 
-        boolean leftCrossed = this.armConfiguration.left() == ArmPose.CROSSED;
-        boolean rightCrossed = this.armConfiguration.right() == ArmPose.CROSSED;
+    private ModelPart[] chainTo(@Nonnull ModelPartRef bone) {
+        return switch (bone) {
+            case ROOT -> new ModelPart[]{this.root};
+            case BODY -> new ModelPart[]{this.root, this.villager, this.torso};
+            case HEAD -> new ModelPart[]{this.root, this.villager, this.torso, this.head};
+            case ARMS -> new ModelPart[]{this.root, this.villager, this.torso, this.arms, this.arms_crossed};
+            case ARMS_CROSSED_SOCKET -> new ModelPart[]{this.root, this.villager, this.torso, this.arms,
+                    this.arms_crossed, this.arms_crossed_socket};
+            case ARM_STRAIGHT_RIGHT_SOCKET -> new ModelPart[]{this.root, this.villager, this.torso, this.arms,
+                    this.arms_straight, this.arm_straight_right, this.arm_straight_right_socket};
+            case ARM_STRAIGHT_LEFT_SOCKET -> new ModelPart[]{this.root, this.villager, this.torso, this.arms,
+                    this.arms_straight, this.arm_straight_left, this.arm_straight_left_socket};
+            case FEET_CENTER_SOCKET -> new ModelPart[]{this.root, this.villager, this.legs, this.feet_center_socket};
+        };
+    }
+
+    private void showArmGeometry(@Nonnull ArmConfiguration armConfiguration) {
+        boolean leftCrossed = armConfiguration.left() == ArmPose.CROSSED;
+        boolean rightCrossed = armConfiguration.right() == ArmPose.CROSSED;
         this.arm_crossed_left.visible = leftCrossed;
         this.arm_straight_left.visible = !leftCrossed;
         this.arm_crossed_right.visible = rightCrossed;
         this.arm_straight_right.visible = !rightCrossed;
-        // The whole center bar is shown only when both arms are crossed; each half-cap is shown
-        // when exactly one arm is crossed so the bar terminates cleanly without the opposing arm.
+        // Half-caps close the crossed bar's exposed end when the opposing arm is straight
         this.arm_crossed_center_whole.visible = leftCrossed && rightCrossed;
         this.arm_crossed_center_left.visible = leftCrossed && !rightCrossed;
         this.arm_crossed_center_right.visible = rightCrossed && !leftCrossed;
+    }
 
-        applyRotation(this.arms_crossed, frame.get(AnimationTargets.ARMS_CROSSED_ROTATION));
-        applyTranslation(this.arms_crossed, frame.get(AnimationTargets.ARMS_CROSSED_TRANSLATION));
-        applyRotation(this.arms_straight, frame.get(AnimationTargets.ARMS_STRAIGHT_ROTATION));
-        applyTranslation(this.arms_straight, frame.get(AnimationTargets.ARMS_STRAIGHT_TRANSLATION));
-        applyRotation(this.arm_crossed_left, frame.get(AnimationTargets.ARM_CROSSED_LEFT_ROTATION));
-        applyTranslation(this.arm_crossed_left, frame.get(AnimationTargets.ARM_CROSSED_LEFT_TRANSLATION));
-        applyRotation(this.arm_crossed_right, frame.get(AnimationTargets.ARM_CROSSED_RIGHT_ROTATION));
-        applyTranslation(this.arm_crossed_right, frame.get(AnimationTargets.ARM_CROSSED_RIGHT_TRANSLATION));
-        applyRotation(this.arm_straight_left, frame.get(AnimationTargets.ARM_STRAIGHT_LEFT_ROTATION));
-        applyTranslation(this.arm_straight_left, frame.get(AnimationTargets.ARM_STRAIGHT_LEFT_TRANSLATION));
-        applyRotation(this.arm_straight_right, frame.get(AnimationTargets.ARM_STRAIGHT_RIGHT_ROTATION));
-        applyTranslation(this.arm_straight_right, frame.get(AnimationTargets.ARM_STRAIGHT_RIGHT_TRANSLATION));
-
-        applyRotation(this.torso, frame.get(AnimationTargets.BODY_ROTATION));
-        applyTranslation(this.torso, frame.get(AnimationTargets.BODY_TRANSLATION));
-        applyRotation(this.nose, frame.get(AnimationTargets.NOSE_ROTATION));
-        applyTranslation(this.nose, frame.get(AnimationTargets.NOSE_TRANSLATION));
-
-        if (frame.has(AnimationTargets.HEAD_ROTATION_OVERRIDE)) {
-            applyAbsoluteRotation(this.head, frame.get(AnimationTargets.HEAD_ROTATION_OVERRIDE),
-                    frame.applicationWeight(AnimationTargets.HEAD_ROTATION_OVERRIDE));
+    private void composeDrawnHead() {
+        this.composedOffset.zero();
+        this.composedRotation.identity();
+        // Offsets must be rotated in their parent's frame to reproduce the full hierarchy with one part.
+        // This assumes unit scale throughout the chain; non-unit scale would require composing scale too.
+        for (ModelPart part : this.chainsByBone[ModelPartRef.HEAD.ordinal()]) {
+            this.partOffset.set(part.x, part.y, part.z);
+            this.composedOffset.add(this.composedRotation.transform(this.partOffset));
+            this.composedRotation.mul(this.partRotation.rotationZYX(part.zRot, part.yRot, part.xRot));
         }
-        applyTranslation(this.head, frame.get(AnimationTargets.HEAD_TRANSLATION));
-
-        // Root motion adds onto the baseline resetPose lays down at the top of every setupAnim, so it
-        // cannot accumulate drift across frames the way a running offset would.
-        applyTranslation(this.root, frame.get(AnimationTargets.ROOT_TRANSLATION));
-        applyRotation(this.root, frame.get(AnimationTargets.ROOT_ROTATION));
-
-        if (frame.has(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)) {
-            applyAbsoluteRotation(this.leg_left, frame.get(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE),
-                    frame.applicationWeight(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE));
-        }
-        if (frame.has(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)) {
-            applyAbsoluteRotation(this.leg_right, frame.get(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE),
-                    frame.applicationWeight(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE));
-        }
-        applyTranslation(this.leg_left, frame.get(AnimationTargets.LEG_LEFT_TRANSLATION));
-        applyTranslation(this.leg_right, frame.get(AnimationTargets.LEG_RIGHT_TRANSLATION));
-
-        applyTranslation(this.monobrow, frame.get(AnimationTargets.MONOBROW_TRANSLATION));
-        applyRotation(this.monobrow, frame.get(AnimationTargets.MONOBROW_ROTATION));
-        applyTranslation(this.mouth, frame.get(AnimationTargets.MOUTH_TRANSLATION));
-        applyRotation(this.mouth, frame.get(AnimationTargets.MOUTH_ROTATION));
-        applyScale(this.mouth, frame.get(AnimationTargets.MOUTH_SCALE));
-        applyTranslation(this.eyelid_left, frame.get(AnimationTargets.EYELID_LEFT_TRANSLATION));
-        applyTranslation(this.eyelid_right, frame.get(AnimationTargets.EYELID_RIGHT_TRANSLATION));
-        applyTranslation(this.eyeball_left, frame.get(AnimationTargets.EYEBALL_LEFT_TRANSLATION));
-        applyTranslation(this.eyeball_right, frame.get(AnimationTargets.EYEBALL_RIGHT_TRANSLATION));
-        applyScale(this.eyeball_left, frame.get(AnimationTargets.EYEBALL_LEFT_SCALE));
-        applyScale(this.eyeball_right, frame.get(AnimationTargets.EYEBALL_RIGHT_SCALE));
-        applyTranslation(this.pupil_left, frame.get(AnimationTargets.PUPIL_LEFT_TRANSLATION));
-        applyTranslation(this.pupil_right, frame.get(AnimationTargets.PUPIL_RIGHT_TRANSLATION));
-        applyScale(this.pupil_left, frame.get(AnimationTargets.PUPIL_LEFT_SCALE));
-        applyScale(this.pupil_right, frame.get(AnimationTargets.PUPIL_RIGHT_SCALE));
-    }
-
-    private static void applyRotation(ModelPart part, Vector3f rotation) {
-        part.xRot += rotation.x();
-        part.yRot += rotation.y();
-        part.zRot += rotation.z();
-    }
-
-    private static void applyTranslation(ModelPart part, Vec3 translation) {
-        part.x += (float) translation.x;
-        part.y += (float) translation.y;
-        part.z += (float) translation.z;
-    }
-
-    /**
-     * Hands a bone over to an authored rotation by the given coverage. Interpolating from whatever the
-     * part already holds — vanilla look-tracking, the walk-swing — is what lets ownership fade in and out
-     * instead of snapping; assigning the rotation outright would wrench the bone the moment a clip with
-     * this target starts, and drop it just as hard when the clip ends.
-     */
-    private static void applyAbsoluteRotation(ModelPart part, Vector3f rotation, float weight) {
-        part.xRot = Mth.lerp(weight, part.xRot, rotation.x());
-        part.yRot = Mth.lerp(weight, part.yRot, rotation.y());
-        part.zRot = Mth.lerp(weight, part.zRot, rotation.z());
-    }
-
-    // Multiplicative onto resetPose's unit scale, so the unit-neutral (1,1,1) is a no-op
-    private static void applyScale(ModelPart part, Vector3f scale) {
-        part.xScale *= scale.x();
-        part.yScale *= scale.y();
-        part.zScale *= scale.z();
+        // A ZYX rotation's inverse is an XYZ rotation with negated angles, so extract from the inverse and negate
+        this.composedRotation.conjugate(this.partRotation).getEulerAnglesXYZ(this.drawnHeadAngles).negate();
+        this.drawnHead.setPos(this.composedOffset.x(), this.composedOffset.y(), this.composedOffset.z());
+        this.drawnHead.setRotation(this.drawnHeadAngles.x(), this.drawnHeadAngles.y(), this.drawnHeadAngles.z());
     }
 
 }

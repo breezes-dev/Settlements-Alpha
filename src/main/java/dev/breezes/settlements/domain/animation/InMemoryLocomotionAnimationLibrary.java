@@ -9,12 +9,20 @@ import java.util.Map;
 
 public final class InMemoryLocomotionAnimationLibrary implements LocomotionAnimationLibrary {
 
+    private final KeyframeAnimation standingPose;
     private final Map<NavigationType, KeyframeAnimation> animationsByType;
 
     @Builder
-    private InMemoryLocomotionAnimationLibrary(@Nonnull Map<NavigationType, KeyframeAnimation> animations) {
+    private InMemoryLocomotionAnimationLibrary(@Nonnull KeyframeAnimation standingPose,
+                                               @Nonnull Map<NavigationType, KeyframeAnimation> animations) {
+        this.standingPose = standingPose;
         this.animationsByType = new EnumMap<>(NavigationType.class);
         this.animationsByType.putAll(animations);
+    }
+
+    @Override
+    public KeyframeAnimation standingPose() {
+        return this.standingPose;
     }
 
     @Override

@@ -23,6 +23,8 @@ public final class ForgeAnimations {
                 .loopMode(LoopMode.LOOP)
                 .blendInTicks(4)
                 .blendOutTicks(4)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
                 .arms(ArmConfiguration.BOTH_STRAIGHT)
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.ARM_STRAIGHT_LEFT_ROTATION)
@@ -41,7 +43,7 @@ public final class ForgeAnimations {
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.55f, -0.94f, 0.0f), Easing.LINEAR),
                                 new Keyframe<>(1, RotationUtil.degrees(0.39f, -0.45f, 0.0f), Easing.LINEAR),
@@ -114,32 +116,20 @@ public final class ForgeAnimations {
                                 new Keyframe<>(0, new Vector3f(1.0f, 0.6f, 1.0f), Easing.LINEAR)
                         ))
                         .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_LEFT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(0.1, 0.0, 0.0), Easing.LINEAR)
-                        ))
-                        .build())
                 .track(AnimationTrack.<Vector3f>builder()
                         .target(AnimationTargets.EYEBALL_RIGHT_SCALE)
                         .keyframes(List.of(
                                 new Keyframe<>(0, new Vector3f(1.0f, 0.6f, 1.0f), Easing.LINEAR)
                         ))
                         .build())
-                .track(AnimationTrack.<Vec3>builder()
-                        .target(AnimationTargets.PUPIL_RIGHT_TRANSLATION)
-                        .keyframes(List.of(
-                                new Keyframe<>(0, new Vec3(-0.1, 0.0, 0.0), Easing.LINEAR)
-                        ))
-                        .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, -7.5f, 0.0f), Easing.LINEAR)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 7.5f, 0.0f), Easing.LINEAR)
                         ))

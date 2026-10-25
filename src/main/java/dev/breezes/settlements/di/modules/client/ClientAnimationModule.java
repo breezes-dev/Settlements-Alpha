@@ -5,31 +5,29 @@ import dagger.Module;
 import dagger.Provides;
 import dev.breezes.settlements.di.ClientSessionScope;
 import dev.breezes.settlements.domain.ai.navigation.NavigationType;
+import dev.breezes.settlements.domain.animation.AmbientAnimationLibrary;
+import dev.breezes.settlements.domain.animation.AmbientAnimations;
 import dev.breezes.settlements.domain.animation.AnimationArchetype;
 import dev.breezes.settlements.domain.animation.AnimationKey;
 import dev.breezes.settlements.domain.animation.AnimationLibrary;
-import dev.breezes.settlements.domain.animation.AnimationResolver;
+import dev.breezes.settlements.domain.animation.BakedAnimationRegistry;
 import dev.breezes.settlements.domain.animation.CartographerAnimations;
 import dev.breezes.settlements.domain.animation.ChopAnimations;
-import dev.breezes.settlements.domain.animation.DefaultAnimationResolver;
-import dev.breezes.settlements.domain.animation.DefaultIdleLifeAnimatorFactory;
-import dev.breezes.settlements.domain.animation.DefaultLocomotionAnimator;
 import dev.breezes.settlements.domain.animation.DefaultUmbrellaAnimatorFactory;
 import dev.breezes.settlements.domain.animation.DigAnimations;
 import dev.breezes.settlements.domain.animation.EatingAnimations;
 import dev.breezes.settlements.domain.animation.FishingAnimations;
 import dev.breezes.settlements.domain.animation.ForgeAnimations;
 import dev.breezes.settlements.domain.animation.HarvestCropAnimations;
-import dev.breezes.settlements.domain.animation.IdleLifeAnimationLibrary;
-import dev.breezes.settlements.domain.animation.IdleLifeAnimations;
-import dev.breezes.settlements.domain.animation.IdleLifeAnimatorFactory;
+import dev.breezes.settlements.domain.animation.IdleAnimationLibrary;
+import dev.breezes.settlements.domain.animation.IdleAnimations;
+import dev.breezes.settlements.domain.animation.InMemoryAmbientAnimationLibrary;
 import dev.breezes.settlements.domain.animation.InMemoryAnimationLibrary;
-import dev.breezes.settlements.domain.animation.InMemoryIdleLifeAnimationLibrary;
+import dev.breezes.settlements.domain.animation.InMemoryIdleAnimationLibrary;
 import dev.breezes.settlements.domain.animation.InMemoryLocomotionAnimationLibrary;
 import dev.breezes.settlements.domain.animation.InteractAnimations;
 import dev.breezes.settlements.domain.animation.LocomotionAnimationLibrary;
 import dev.breezes.settlements.domain.animation.LocomotionAnimations;
-import dev.breezes.settlements.domain.animation.LocomotionAnimator;
 import dev.breezes.settlements.domain.animation.PickUpAnimations;
 import dev.breezes.settlements.domain.animation.ReadBookAnimations;
 import dev.breezes.settlements.domain.animation.RepairIronGolemAnimations;
@@ -47,16 +45,21 @@ import java.util.Map;
 public abstract class ClientAnimationModule {
 
     @Binds
-    abstract AnimationResolver animationResolver(DefaultAnimationResolver implementation);
-
-    @Binds
-    abstract IdleLifeAnimatorFactory idleLifeAnimatorFactory(DefaultIdleLifeAnimatorFactory implementation);
-
-    @Binds
-    abstract LocomotionAnimator locomotionAnimator(DefaultLocomotionAnimator implementation);
-
-    @Binds
     abstract UmbrellaAnimatorFactory umbrellaAnimatorFactory(DefaultUmbrellaAnimatorFactory implementation);
+
+    /**
+     * Bakes this session's own library instances.
+     * A baked form is found by its clip's instance, so the registry finds only the clips these same instances resolve.
+     */
+    @Provides
+    @ClientSessionScope
+    static BakedAnimationRegistry bakedAnimationRegistry(AnimationLibrary animationLibrary,
+                                                         IdleAnimationLibrary idleAnimationLibrary,
+                                                         AmbientAnimationLibrary ambientAnimationLibrary,
+                                                         LocomotionAnimationLibrary locomotionAnimationLibrary) {
+        return BakedAnimationRegistry.forVillager(animationLibrary, idleAnimationLibrary, ambientAnimationLibrary,
+                locomotionAnimationLibrary);
+    }
 
     @Provides
     @ClientSessionScope
@@ -87,12 +90,23 @@ public abstract class ClientAnimationModule {
 
     @Provides
     @ClientSessionScope
-    static IdleLifeAnimationLibrary idleLifeAnimationLibrary() {
-        return InMemoryIdleLifeAnimationLibrary.builder()
-                .baseIdle(IdleLifeAnimations.baseIdle())
-                .blink(IdleLifeAnimations.blink())
-                .fidgets(List.of(
-                        IdleLifeAnimations.ponder()))
+    static IdleAnimationLibrary idleAnimationLibrary() {
+        return InMemoryIdleAnimationLibrary.builder()
+                .idleAnimations(List.of(
+                        IdleAnimations.ponder()))
+                .build();
+    }
+
+    @Provides
+    @ClientSessionScope
+    static AmbientAnimationLibrary ambientAnimationLibrary() {
+        return InMemoryAmbientAnimationLibrary.builder()
+                .breathingCycle(AmbientAnimations.breathingCycle())
+                .blink(AmbientAnimations.blink())
+                .browMotions(List.of(
+                        AmbientAnimations.browRaise(),
+                        AmbientAnimations.browRaiseLeftEnd(),
+                        AmbientAnimations.browRaiseRightEnd()))
                 .build();
     }
 
@@ -100,6 +114,7 @@ public abstract class ClientAnimationModule {
     @ClientSessionScope
     static LocomotionAnimationLibrary locomotionAnimationLibrary() {
         return InMemoryLocomotionAnimationLibrary.builder()
+                .standingPose(LocomotionAnimations.standingPose())
                 .animations(Map.of(
                         NavigationType.STROLL, LocomotionAnimations.stroll(),
                         NavigationType.WALK, LocomotionAnimations.walk(),

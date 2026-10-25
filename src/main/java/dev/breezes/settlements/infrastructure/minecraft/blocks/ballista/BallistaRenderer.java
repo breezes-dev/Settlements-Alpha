@@ -1,6 +1,8 @@
 package dev.breezes.settlements.infrastructure.minecraft.blocks.ballista;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.breezes.settlements.domain.animation.AnimationPose;
+import dev.breezes.settlements.domain.animation.BallistaAnimationTargets;
 import dev.breezes.settlements.domain.ballista.BallistaAim;
 import dev.breezes.settlements.domain.ballista.BallistaGeometry;
 import dev.breezes.settlements.infrastructure.minecraft.entities.client.BallistaBoltModel;
@@ -37,6 +39,9 @@ public class BallistaRenderer implements BlockEntityRenderer<BallistaBlockEntity
     private final BallistaModel model;
     private final BallistaBoltModel boltModel;
 
+    // Filled and drawn within one render call, so every ballista shares it
+    private final AnimationPose pose = new AnimationPose(BallistaAnimationTargets.RIG);
+
     public BallistaRenderer(@Nonnull BlockEntityRendererProvider.Context context) {
         this.model = new BallistaModel(context.bakeLayer(BallistaModel.LAYER));
         this.boltModel = new BallistaBoltModel(context.bakeLayer(BallistaBoltModel.LAYER));
@@ -56,7 +61,8 @@ public class BallistaRenderer implements BlockEntityRenderer<BallistaBlockEntity
         // Negative model pitch raise the muzzle
         float turretYRot = (float) Math.toRadians(yaw - MODEL_REST_HEADING_DEGREES);
         float turretXRot = (float) Math.toRadians(-pitch);
-        this.model.pose(turretYRot, turretXRot, ballista.sampleAnimation(partialTick));
+        ballista.sampleAnimationInto(this.pose, partialTick);
+        this.model.pose(turretYRot, turretXRot, this.pose);
 
         poseStack.pushPose();
         poseStack.translate(0.5F, 0.0F, 0.5F);

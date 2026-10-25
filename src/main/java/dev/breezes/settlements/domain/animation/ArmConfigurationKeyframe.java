@@ -1,8 +1,13 @@
 package dev.breezes.settlements.domain.animation;
 
-import dev.breezes.settlements.domain.presentation.ArmConfiguration;
+import dev.breezes.settlements.domain.presentation.ArmPose;
 
-public record ArmConfigurationKeyframe(int tick, ArmConfiguration configuration) {
+import javax.annotation.Nullable;
+
+/**
+ * A clip's per-arm claims at a nonnegative animation tick. A null pose leaves that arm unclaimed.
+ */
+public record ArmConfigurationKeyframe(int tick, @Nullable ArmPose left, @Nullable ArmPose right) {
 
     public ArmConfigurationKeyframe {
         if (tick < 0) {

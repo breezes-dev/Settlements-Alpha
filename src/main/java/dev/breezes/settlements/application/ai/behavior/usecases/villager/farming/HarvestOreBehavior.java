@@ -175,7 +175,7 @@ public class HarvestOreBehavior extends VillagerStateMachineBehavior {
                 .addKeyFrame(ClockTicks.of(ChopAnimations.CHOP_IMPACT_TICKS), this::replaceOre)
                 .onEnd(ctx -> {
                     ctx.getInitiator().clearHeldItem();
-                    ctx.getInitiator().setMotion(AnimationArchetype.IDLE);
+                    ctx.getInitiator().setMotion(AnimationArchetype.NONE);
                     return StepResult.transition(Stage.SETTLE);
                 })
                 .build();
@@ -244,7 +244,7 @@ public class HarvestOreBehavior extends VillagerStateMachineBehavior {
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
         villager.getNavigationManager().stop();
         villager.clearHeldItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
     }
 
     private static int totalItemCount(@Nonnull List<ItemStack> drops) {

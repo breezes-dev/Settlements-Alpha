@@ -25,8 +25,8 @@ public final class SleepingAnimations {
                 .id(ResourceLocationUtil.mod("animation/sleeping/sleep"))
                 .durationTicks(SLEEP_DURATION_TICKS)
                 .loopMode(LoopMode.LOOP)
-                .blendInTicks(4)
-                .blendOutTicks(4)
+                // The clip carries its own breathing, closed lids, and head, so nothing awake may show through
+                .playExclusively()
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 // Arms rise and fall with each breath, peaking mid-cycle and returning to rest at the loop end.
                 .track(AnimationTrack.<Vector3f>builder()
@@ -60,7 +60,7 @@ public final class SleepingAnimations {
                         .build())
                 // Head dips forward at peak inhale, returns to neutral before the arm breath cycle closes.
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.HEAD_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.HEAD_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, 0.0f), Easing.CUBIC),
                                 new Keyframe<>(40, RotationUtil.degrees(-5.0f, 0.0f, 0.0f), Easing.CUBIC),
@@ -131,13 +131,13 @@ public final class SleepingAnimations {
                         .build())
                 // Legs are splayed at rest for the whole loop.
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, 2.5f), Easing.LINEAR)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 0.0f, -2.5f), Easing.LINEAR)
                         ))

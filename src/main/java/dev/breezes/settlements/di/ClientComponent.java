@@ -19,6 +19,7 @@ import dev.breezes.settlements.infrastructure.minecraft.blocks.ballista.Ballista
 import dev.breezes.settlements.infrastructure.minecraft.data.farming.crops.CultivationSeedSetClientProjection;
 import dev.breezes.settlements.infrastructure.minecraft.data.schedule.VillageDayTypeClientProjection;
 import dev.breezes.settlements.infrastructure.network.core.ClientSidePacketReceiver;
+import dev.breezes.settlements.infrastructure.rendering.animation.ObservationalVillagerRenderFlag;
 import dev.breezes.settlements.infrastructure.rendering.border.SettlementBorderRenderer;
 import dev.breezes.settlements.infrastructure.rendering.debug.SettlementDebugOverlayState;
 import dev.breezes.settlements.infrastructure.rendering.debug.tuning.DebugTuningBoard;
@@ -61,6 +62,8 @@ public interface ClientComponent {
     SocketRegistry socketRegistry();
 
     AttachmentDisplayProfileRegistry attachmentDisplayProfileRegistry();
+
+    ObservationalVillagerRenderFlag observationalVillagerRenderFlag();
 
     EntityHighlightRenderer entityHighlightRenderer();
 

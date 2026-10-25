@@ -40,7 +40,7 @@ public final class ClockHudRenderer implements LayeredDraw.Layer, ClientSessionR
      * How often the painted lines are rebuilt. The finest reading on the panel is one in-game minute, which
      * lasts longer than this, so no minute can pass unshown while every frame in between reuses the work.
      */
-    private static final ClockTicks REBUILD_INTERVAL = ClockTicks.seconds(0.5);
+    private static final ClockTicks REBUILD_INTERVAL = ClockTicks.of(1);
 
     private static final int MARGIN = 4;
     private static final int PADDING = 4;

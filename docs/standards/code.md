@@ -45,10 +45,12 @@ Injected dependencies are `private final`. No field injection, no setter injecti
 
 ## C4 — Absence contracts
 
-**Non-null is the default, and only nullability is marked.** An unannotated return is non-null; do not write `@Nonnull`
-on one. Restating the default on every declaration is what makes the marked case hard to spot, and the marked case is
-the only one a reader has to act on. A return that can be null carries `@Nullable`, on the declaration and on every
-override. Parameters are unaffected — they carry their explicit annotations as the surrounding code already does.
+**Non-null is the default, and only nullability is marked.** An unannotated return or field is non-null; do not write
+`@Nonnull` on either. A record component counts as a field: leave it unannotated unless it can be null. Restating the
+default on every declaration is what makes the marked case hard to spot, and the marked case is the only one a reader
+has to act on. A return or field that can be null carries `@Nullable`, and a return carries it on the declaration and
+on every override. Parameters are unaffected — they carry their explicit annotations as the surrounding code already
+does.
 
 The root package's `package-info.java` declares the non-null default for returns and fields once, with Checker
 Framework's `@DefaultQualifier`, which IntelliJ applies to every subpackage. A JSR-305 or JSpecify package default would

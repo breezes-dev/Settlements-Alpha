@@ -1,7 +1,7 @@
 package dev.breezes.settlements.infrastructure.minecraft.entities.villager.model.rendering;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import dev.breezes.settlements.domain.animation.AnimationFrame;
+import dev.breezes.settlements.domain.animation.AnimationPose;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
@@ -9,7 +9,7 @@ import net.minecraft.world.phys.Vec3;
 import javax.annotation.Nonnull;
 
 /**
- * A baked model an attachment can render as is, posed from an already-sampled animation frame.
+ * A baked model an attachment can render as is, posed from a pose on its own rig.
  * <p>
  * Posing and drawing are one call because they cannot be safely separated: implementations pose additively
  * onto a rest pose they are responsible for restoring first, so a caller that posed without drawing, or drew
@@ -18,12 +18,13 @@ import javax.annotation.Nonnull;
 public interface AttachmentModel {
 
     /**
-     * Restores the rest pose, applies whatever targets in the frame belong to this model, and draws it.
+     * Restores the rest pose, applies the pose, and draws the model.
      *
-     * @param frame   the sampled frame; targets absent from it leave their bones at rest
+     * @param pose    the pose for this draw, on this model's own rig
      * @param texture the skin to paint this draw with
+     * @throws IllegalArgumentException if the pose is on another rig
      */
-    void render(@Nonnull AnimationFrame frame,
+    void render(@Nonnull AnimationPose pose,
                 @Nonnull PoseStack poseStack,
                 @Nonnull MultiBufferSource buffer,
                 int packedLight,

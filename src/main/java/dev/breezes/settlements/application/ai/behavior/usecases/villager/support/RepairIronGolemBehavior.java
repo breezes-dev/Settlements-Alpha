@@ -193,7 +193,7 @@ public class RepairIronGolemBehavior extends VillagerStateMachineBehavior {
         villager.getNavigationManager().stop();
         villager.clearHeldItem();
         villager.clearOffhandItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         this.targetToRepair = null;
         this.remainingRepairAttempts = 0;
         this.shouldRewardExperience = false;

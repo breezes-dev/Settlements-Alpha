@@ -2,7 +2,7 @@ package dev.breezes.settlements.domain.animation;
 
 public enum AnimationArchetype {
 
-    IDLE,
+    NONE,
     SWING_HEAVY,
     CAST,
     REEL_IN,
@@ -34,7 +34,7 @@ public enum AnimationArchetype {
     public static AnimationArchetype fromNetworkByte(byte encoded) {
         int index = Byte.toUnsignedInt(encoded);
         if (index >= VALUES.length) {
-            return IDLE;
+            return NONE;
         }
 
         return VALUES[index];

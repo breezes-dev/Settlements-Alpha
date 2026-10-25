@@ -1,5 +1,7 @@
 package dev.breezes.settlements.domain.animation;
 
+import dev.breezes.settlements.shared.util.ResourceLocationUtil;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -9,103 +11,56 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AnimationTrackTest {
 
-    @Test
-    void sample_returnsExactKeyframeValuesAtKeyframeTicks() {
-        // Arrange
-        AnimationTrack<Float> track = track(
-                new Keyframe<>(0, 0.0F, Easing.LINEAR),
-                new Keyframe<>(10, 10.0F, Easing.LINEAR));
-
-        // Act, Assert
-        assertEquals(0.0F, track.sample(0.0F), 0.0001F);
-        assertEquals(10.0F, track.sample(10.0F), 0.0001F);
-    }
+    private static final AnimationRig RIG = VillagerAnimationRig.RIG;
+    private static final AnimationTarget<Vec3> TARGET = AnimationTargets.BODY_TRANSLATION;
+    private static final float TOLERANCE = 1.0E-5F;
 
     @Test
-    void sample_interpolatesBetweenKeyframesUsingCurrentKeyframeEasing() {
+    void build_ordersKeyframesByTick_whateverOrderTheyAreGivenIn() {
         // Arrange
-        AnimationTrack<Float> track = track(
-                new Keyframe<>(0, 0.0F, Easing.EASE_IN),
-                new Keyframe<>(10, 10.0F, Easing.LINEAR));
+        AnimationTrack<Vec3> track = track(
+                new Keyframe<>(10, new Vec3(0.0, 10.0, 0.0), Easing.LINEAR),
+                new Keyframe<>(0, Vec3.ZERO, Easing.LINEAR));
+        AnimationPose pose = new AnimationPose(RIG);
 
         // Act
-        float result = track.sample(5.0F);
+        bake(track).sampleInto(pose, 5.0F);
 
-        // Assert
-        assertEquals(2.5F, result, 0.0001F);
+        // Assert: keys left in authored order would hold the first value instead of interpolating
+        assertEquals(5.0F, pose.get(RIG.indexOf(TARGET), 1), TOLERANCE);
     }
 
     @Test
-    void sample_findsCorrectSegmentInDenseTrack() {
-        // Arrange
-        AnimationTrack<Float> track = track(
-                new Keyframe<>(0, 0.0F, Easing.LINEAR),
-                new Keyframe<>(2, 2.0F, Easing.LINEAR),
-                new Keyframe<>(4, 4.0F, Easing.LINEAR),
-                new Keyframe<>(6, 6.0F, Easing.LINEAR),
-                new Keyframe<>(8, 8.0F, Easing.LINEAR),
-                new Keyframe<>(10, 10.0F, Easing.LINEAR));
-
-        // Act
-        float result = track.sample(7.0F);
-
-        // Assert
-        assertEquals(7.0F, result, 0.0001F);
-    }
-
-    @Test
-    void sample_exactInteriorTickUsesPreviousSegmentEndpoint() {
-        // Arrange
-        AnimationTrack<Float> track = track(
-                new Keyframe<>(0, 0.0F, Easing.STEP),
-                new Keyframe<>(5, 5.0F, Easing.LINEAR),
-                new Keyframe<>(10, 10.0F, Easing.LINEAR));
-
-        // Act
-        float result = track.sample(5.0F);
-
-        // Assert
-        assertEquals(5.0F, result, 0.0001F);
-    }
-
-    @Test
-    void sample_supportsNonMonotonicCallsWithoutSharedCursorState() {
-        // Arrange
-        AnimationTrack<Float> track = track(
-                new Keyframe<>(0, 0.0F, Easing.LINEAR),
-                new Keyframe<>(5, 5.0F, Easing.LINEAR),
-                new Keyframe<>(10, 10.0F, Easing.LINEAR));
-
+    void build_rejectsTwoKeyframes_atOneTick() {
         // Act, Assert
-        assertEquals(9.0F, track.sample(9.0F), 0.0001F);
-        assertEquals(1.0F, track.sample(1.0F), 0.0001F);
-        assertEquals(6.0F, track.sample(6.0F), 0.0001F);
-    }
-
-    @Test
-    void constructor_sortsKeyframesByTick() {
-        // Arrange
-        AnimationTrack<Float> track = track(
-                new Keyframe<>(10, 10.0F, Easing.LINEAR),
-                new Keyframe<>(0, 0.0F, Easing.LINEAR));
-
-        // Act, Assert
-        assertEquals(5.0F, track.sample(5.0F), 0.0001F);
-    }
-
-    @Test
-    void constructor_rejectsDuplicateTicks() {
-        // Arrange, Act, Assert
         assertThrows(IllegalArgumentException.class, () -> track(
-                new Keyframe<>(0, 0.0F, Easing.LINEAR),
-                new Keyframe<>(0, 10.0F, Easing.LINEAR)));
+                new Keyframe<>(0, Vec3.ZERO, Easing.LINEAR),
+                new Keyframe<>(0, new Vec3(0.0, 10.0, 0.0), Easing.LINEAR)));
+    }
+
+    @Test
+    void build_rejectsATrack_withNoKeyframes() {
+        // Act, Assert
+        assertThrows(IllegalArgumentException.class, () -> AnimationTrack.<Vec3>builder()
+                .target(TARGET)
+                .keyframes(List.of())
+                .build());
     }
 
     @SafeVarargs
-    private static AnimationTrack<Float> track(Keyframe<Float>... keyframes) {
-        return AnimationTrack.<Float>builder()
-                .target(AnimationTestTargets.FLOAT)
+    private static AnimationTrack<Vec3> track(Keyframe<Vec3>... keyframes) {
+        return AnimationTrack.<Vec3>builder()
+                .target(TARGET)
                 .keyframes(List.of(keyframes))
                 .build();
     }
+
+    private static BakedAnimation bake(AnimationTrack<Vec3> track) {
+        return BakedAnimation.bake(KeyframeAnimation.fromTracks()
+                .id(ResourceLocationUtil.mod("animation/test/track"))
+                .durationTicks(10)
+                .track(track)
+                .build(), RIG);
+    }
+
 }

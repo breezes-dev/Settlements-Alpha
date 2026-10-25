@@ -27,7 +27,7 @@ class AnimationArchetypeTest {
         AnimationArchetype actual = AnimationArchetype.fromNetworkByte(encoded);
 
         // Assert
-        assertEquals(AnimationArchetype.IDLE, actual);
+        assertEquals(AnimationArchetype.NONE, actual);
     }
 
 }

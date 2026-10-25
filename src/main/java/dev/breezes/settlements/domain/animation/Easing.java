@@ -1,7 +1,7 @@
 package dev.breezes.settlements.domain.animation;
 
 /**
- * Curves normalized keyframe progress before type-specific interpolation.
+ * Curves the normalized progress between two keyframes, clamping it to [0, 1] first.
  */
 public enum Easing {
 

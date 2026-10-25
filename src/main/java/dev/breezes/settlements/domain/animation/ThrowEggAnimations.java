@@ -25,6 +25,9 @@ public final class ThrowEggAnimations {
                 .loopMode(LoopMode.LOOP)
                 .blendInTicks(4)
                 .blendOutTicks(4)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
+                // The lids hold the eyes wide, which an owning blink would otherwise close fully
+                .suppresses(SuppressibleComponent.BLINK)
                 // arm_straight_left and arm_straight_right are the driven bones, so the straight-arm
                 // geometry must be visible for the windmill to show.
                 .arms(ArmConfiguration.BOTH_STRAIGHT)
@@ -142,13 +145,13 @@ public final class ThrowEggAnimations {
                         .build())
                 // Legs splay outward into a braced stance held for the whole clip.
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, -7.5f, 0.0f), Easing.LINEAR)
                         ))
                         .build())
                 .track(AnimationTrack.<Vector3f>builder()
-                        .target(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE)
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
                         .keyframes(List.of(
                                 new Keyframe<>(0, RotationUtil.degrees(0.0f, 7.5f, 0.0f), Easing.LINEAR)
                         ))

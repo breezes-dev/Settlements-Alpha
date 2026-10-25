@@ -2,15 +2,7 @@ package dev.breezes.settlements.infrastructure.minecraft.entities.villager.model
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.breezes.settlements.di.ClientComponent;
-import dev.breezes.settlements.di.ClientSessionComponent;
 import dev.breezes.settlements.di.SettlementsDagger;
-import dev.breezes.settlements.domain.animation.AnimationArchetype;
-import dev.breezes.settlements.domain.animation.AnimationFrame;
-import dev.breezes.settlements.domain.animation.AnimationSelectionContext;
-import dev.breezes.settlements.domain.animation.VillagerAnimator;
-import dev.breezes.settlements.domain.inventory.EquipmentSlot;
-import dev.breezes.settlements.domain.presentation.ItemCategory;
-import dev.breezes.settlements.infrastructure.minecraft.attachments.EquipmentLookup;
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.BaseVillager;
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.model.SettlementsVillagerModel;
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.model.UmbrellaModel;
@@ -23,36 +15,41 @@ import net.minecraft.client.renderer.entity.layers.VillagerProfessionLayer;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Map;
 
-public final class SettlementsVillagerRenderer extends MobRenderer<BaseVillager, SettlementsVillagerModel<BaseVillager>> {
+public final class SettlementsVillagerRenderer extends MobRenderer<BaseVillager, SettlementsVillagerModel> {
 
     private static final float SHADOW_RADIUS = 0.5F;
-    // Matches vanilla VillagerRenderer.scale(): the base model is authored slightly oversized, so
-    // vanilla itself shrinks it back down by this factor on every render.
+    // Compensate for the model's dimensions so its rendered size matches vanilla villagers
     private static final float VANILLA_MODEL_SCALE = 0.9375F;
 
-    private final AttachmentRenderLayer attachmentRenderLayer;
+    private final VillagerAnimationRenderAdapter animationAdapter;
 
     public SettlementsVillagerRenderer(@Nonnull EntityRendererProvider.Context context) {
-        super(context, new SettlementsVillagerModel<>(context.bakeLayer(SettlementsVillagerModel.LAYER)), SHADOW_RADIUS);
+        this(context, SettlementsDagger.client(),
+                new VillagerAnimationRenderAdapter(SettlementsDagger.client().observationalVillagerRenderFlag()));
+    }
 
-        // Minecraft owns renderer construction, so the Dagger graph is reached through the project bootstrap bridge.
-        ClientComponent clientComponent = SettlementsDagger.client();
-        // context.bakeLayer is only reachable here, so the model-id -> baked-model registry is built
-        // per renderer instance rather than supplied through Dagger like the other attachment registries.
+    private SettlementsVillagerRenderer(@Nonnull EntityRendererProvider.Context context,
+                                        @Nonnull ClientComponent clientComponent,
+                                        @Nonnull VillagerAnimationRenderAdapter animationAdapter) {
+        super(context,
+                new SettlementsVillagerModel(context.bakeLayer(SettlementsVillagerModel.LAYER), animationAdapter),
+                SHADOW_RADIUS);
+        this.animationAdapter = animationAdapter;
+
+        // Baked attachment models belong to this renderer's context, so the registry is built with it
         UmbrellaModel umbrellaModel = new UmbrellaModel(context.bakeLayer(UmbrellaModel.LAYER));
         AttachmentModelRegistry attachmentModelRegistry = new InMemoryAttachmentModelRegistry(Map.of(UmbrellaModel.ID, umbrellaModel));
-        this.attachmentRenderLayer = new AttachmentRenderLayer(
+        this.addLayer(new AttachmentRenderLayer(
                 this,
+                animationAdapter,
                 context.getItemInHandRenderer(),
                 attachmentModelRegistry,
                 clientComponent.attachmentProviders(),
                 clientComponent.slotAnchorRegistry(),
                 clientComponent.socketRegistry(),
-                clientComponent.attachmentDisplayProfileRegistry());
-        this.addLayer(this.attachmentRenderLayer);
+                clientComponent.attachmentDisplayProfileRegistry()));
         this.addLayer(new CustomHeadLayer<>(this, context.getModelSet(), context.getItemInHandRenderer()));
         this.addLayer(new VillagerProfessionLayer<>(this, context.getResourceManager(), "villager"));
         this.addLayer(new SootOverlayRenderLayer(this));
@@ -76,71 +73,29 @@ public final class SettlementsVillagerRenderer extends MobRenderer<BaseVillager,
     }
 
     @Override
+    protected void setupRotations(@Nonnull BaseVillager villager,
+                                  @Nonnull PoseStack poseStack,
+                                  float bob,
+                                  float yBodyRot,
+                                  float partialTick,
+                                  float scale) {
+        this.animationAdapter.observeBodyHeading(villager, yBodyRot);
+        super.setupRotations(villager, poseStack, bob, yBodyRot, partialTick, scale);
+    }
+
+    @Override
     public void render(@Nonnull BaseVillager villager,
                        float yaw,
                        float partialTicks,
                        @Nonnull PoseStack poseStack,
                        @Nonnull MultiBufferSource buffer,
                        int packedLight) {
-        long gameTime = villager.level().getGameTime();
-        VillagerAnimator animator = this.getOrUpdateAnimator(villager, gameTime);
-        // A villager drawn outside a world (e.g., another mod's preview screen) has no session to animate it,
-        // so it renders unanimated
-        if (animator != null) {
-            this.model.prepareAnimation(animator, villager.getLocomotionNavigationType(), gameTime, partialTicks,
-                    villager.isExposedToRain());
-        }
+        boolean startRaisedFlag = this.animationAdapter.startRender(villager, partialTicks);
         try {
             super.render(villager, yaw, partialTicks, poseStack, buffer, packedLight);
         } finally {
-            this.model.clearPreparedAnimation();
+            this.animationAdapter.finishRender(startRaisedFlag);
         }
-    }
-
-    public AnimationFrame currentFrame() {
-        return this.model.getResolvedAnimationFrame();
-    }
-
-    /**
-     * Advances the animator's motion state and returns it so the caller can sample both the
-     * animation frame and the arm configuration from a single up-to-date animator instance.
-     *
-     * @return the animator, or null when no client session exists
-     */
-    @Nullable
-    private VillagerAnimator getOrUpdateAnimator(@Nonnull BaseVillager villager, long gameTime) {
-        ClientSessionComponent session = SettlementsDagger.clientSessionOrNull();
-        if (session == null) {
-            return null;
-        }
-
-        VillagerAnimator animator = villager.getAnimator(session.villagerAnimatorFactory());
-
-        // Sleep is read straight off the vanilla-synced state; while asleep the animator plays the
-        // sleep clip and suppresses the idle ambience entirely (no new sync surface needed).
-        animator.setSleeping(villager.isSleeping(), gameTime);
-
-        AnimationArchetype currentMotion = villager.getMotion();
-        byte currentGeneration = villager.getMotionGeneration();
-
-        if (animator.getLastSeenArchetype() != currentMotion || animator.getLastSeenGeneration() != currentGeneration) {
-            AnimationSelectionContext ctx = selectionContext(villager);
-            animator.onMotionChanged(currentMotion, currentGeneration, ctx, gameTime);
-        } else {
-            // Re-evaluate context every frame so item category changes caused by the 1-frame
-            // equipment-sync lag after archetype sync are caught and resolved correctly.
-            animator.tickContext(selectionContext(villager), gameTime);
-        }
-
-        return animator;
-    }
-
-    private static AnimationSelectionContext selectionContext(@Nonnull BaseVillager villager) {
-        ItemCategory mainHandCategory = EquipmentLookup.find(villager)
-                .flatMap(equipment -> equipment.getEquipped(EquipmentSlot.MAIN_HAND))
-                .map(ItemCategory::of)
-                .orElse(ItemCategory.GENERIC);
-        return new AnimationSelectionContext(mainHandCategory);
     }
 
 }

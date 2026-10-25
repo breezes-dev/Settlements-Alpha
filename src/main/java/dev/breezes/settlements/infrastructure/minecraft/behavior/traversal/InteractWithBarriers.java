@@ -215,7 +215,7 @@ public final class InteractWithBarriers {
         }
 
         AnimationArchetype motion = villager.getMotion();
-        if (motion != AnimationArchetype.IDLE && motion != AnimationArchetype.INTERACT) {
+        if (motion != AnimationArchetype.NONE && motion != AnimationArchetype.INTERACT) {
             return;
         }
 

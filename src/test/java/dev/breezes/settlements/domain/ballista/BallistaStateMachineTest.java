@@ -1,9 +1,10 @@
 package dev.breezes.settlements.domain.ballista;
 
+import dev.breezes.settlements.domain.animation.AnimationPose;
+import dev.breezes.settlements.domain.animation.BakedAnimation;
 import dev.breezes.settlements.domain.animation.BallistaAnimationTargets;
 import dev.breezes.settlements.domain.animation.BallistaAnimations;
 import dev.breezes.settlements.domain.animation.KeyframeAnimation;
-import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BallistaStateMachineTest {
 
     private static final KeyframeAnimation WIND = BallistaAnimations.wind();
+    private static final BakedAnimation BAKED_WIND = BakedAnimation.bake(WIND, BallistaAnimationTargets.RIG);
     private static final int WIND_LENGTH = WIND.getDurationTicks();
 
     private static final KeyframeAnimation FIRE = BallistaAnimations.fire();
@@ -250,9 +252,17 @@ class BallistaStateMachineTest {
     }
 
     private static boolean pusherMovesBetween(int fromTick, int toTick) {
-        Vec3 from = WIND.sample(fromTick).get(BallistaAnimationTargets.PUSHER_TRANSLATION);
-        Vec3 to = WIND.sample(toTick).get(BallistaAnimationTargets.PUSHER_TRANSLATION);
-        return !from.equals(to);
+        AnimationPose from = new AnimationPose(BallistaAnimationTargets.RIG);
+        AnimationPose to = new AnimationPose(BallistaAnimationTargets.RIG);
+        BAKED_WIND.sampleInto(from, fromTick);
+        BAKED_WIND.sampleInto(to, toTick);
+        int pusher = BallistaAnimationTargets.RIG.indexOf(BallistaAnimationTargets.PUSHER_TRANSLATION);
+        for (int axis = 0; axis < AnimationPose.COMPONENTS; axis++) {
+            if (from.get(pusher, axis) != to.get(pusher, axis)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

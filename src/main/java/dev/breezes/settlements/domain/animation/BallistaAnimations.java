@@ -38,9 +38,6 @@ public final class BallistaAnimations {
                 .id(ResourceLocationUtil.mod("animation/ballista/wind"))
                 .durationTicks(WIND_DURATION_TICKS)
                 .loopMode(LoopMode.ONCE)
-                // No blending: the clip already starts on the pose it leaves and ends on the one it reaches
-                .blendInTicks(0)
-                .blendOutTicks(0)
                 .track(rotation(BallistaAnimationTargets.LIMB_LEFT_OUTER_ROTATION,
                         at(0, RotationUtil.degrees(0.0F, 0.0F, 0.0F)),
                         at(10, RotationUtil.degrees(0.0F, -8.13F, 0.0F)),
@@ -159,9 +156,6 @@ public final class BallistaAnimations {
                 .id(ResourceLocationUtil.mod("animation/ballista/fire"))
                 .durationTicks(FIRE_DURATION_TICKS)
                 .loopMode(LoopMode.ONCE)
-                // No blending: the clip already starts on the pose it leaves and ends on the one it reaches
-                .blendInTicks(0)
-                .blendOutTicks(0)
                 .track(rotation(BallistaAnimationTargets.LIMB_LEFT_OUTER_ROTATION,
                         at(0, RotationUtil.degrees(0.0F, -32.5F, 0.0F)),
                         at(2, RotationUtil.degrees(0.0F, 0.0F, 0.0F)),

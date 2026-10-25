@@ -38,6 +38,7 @@ public final class CartographerAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(BLEND_IN_TICKS)
                 .blendOutTicks(BLEND_OUT_TICKS)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
                 .track(rotation(AnimationTargets.ARMS_CROSSED_ROTATION, List.of(
                         key(0, rotation(0.0F, 0.0F, 0.0F), Easing.EASE_OUT),
                         key(SURVEY_RAISE_TICK, rotation(-60.0F, 0.0F, 0.0F), Easing.EASE_IN),
@@ -49,7 +50,7 @@ public final class CartographerAnimations {
                         key(0, Vec3.ZERO, Easing.EASE_OUT),
                         key(SURVEY_RAISE_TICK, new Vec3(0.0D, -2.2D, -0.3D), Easing.EASE_IN),
                         key(SURVEY_DURATION_TICKS, Vec3.ZERO, Easing.LINEAR))))
-                .track(rotation(AnimationTargets.HEAD_ROTATION_OVERRIDE, List.of(
+                .track(rotation(AnimationTargets.HEAD_ROTATION, List.of(
                         key(0, rotation(0.0F, 0.0F, 0.0F), Easing.EASE_OUT),
                         key(SURVEY_RAISE_TICK, rotation(-10.0F, 0.0F, 0.0F), Easing.EASE_IN),
                         key(SURVEY_LEFT_TICK, rotation(-10.0F, -25.0F, 0.0F), Easing.EASE_IN_OUT),
@@ -66,11 +67,12 @@ public final class CartographerAnimations {
                 .loopMode(LoopMode.ONCE)
                 .blendInTicks(BLEND_IN_TICKS)
                 .blendOutTicks(BLEND_OUT_TICKS)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
                 .track(rotation(AnimationTargets.ARMS_CROSSED_ROTATION, List.of(
                         key(0, rotation(0.0F, 0.0F, 0.0F), Easing.EASE_OUT),
                         key(MAP_RAISE_TICK, rotation(10.0F, 0.0F, 0.0F), Easing.EASE_OUT),
                         key(MARK_DURATION_TICKS, rotation(0.0F, 0.0F, 0.0F), Easing.LINEAR))))
-                .track(rotation(AnimationTargets.HEAD_ROTATION_OVERRIDE, List.of(
+                .track(rotation(AnimationTargets.HEAD_ROTATION, List.of(
                         key(0, rotation(0.0F, 0.0F, 0.0F), Easing.EASE_OUT),
                         key(MAP_RAISE_TICK, rotation(25.0F, 0.0F, 0.0F), Easing.EASE_OUT),
                         key(MARK_DURATION_TICKS, rotation(0.0F, 0.0F, 0.0F), Easing.LINEAR))))

@@ -244,7 +244,7 @@ public class HarvestSugarCaneBehavior extends VillagerStateMachineBehavior {
     @Override
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
         villager.getNavigationManager().stop();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
     }
 
 }

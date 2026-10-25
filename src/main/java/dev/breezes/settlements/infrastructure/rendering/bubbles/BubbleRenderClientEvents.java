@@ -28,14 +28,15 @@ public class BubbleRenderClientEvents {
             return;
         }
 
-        // Bubble state advances by the partial tick handed to this callback, so it has to advance once per
-        // frame rather than once per render call. A supplementary pass re-renders an entity vanilla already
-        // drew this frame, which would age every bubble on that villager at double speed while it runs.
+        // Supplementary passes can render the same villager again in a frame. Skip them to avoid advancing
+        // bubble lifetimes twice and drawing bubbles into the effect buffer.
         if (event.getMultiBufferSource() instanceof SupplementaryEntityPass) {
             return;
         }
 
         BubbleManager bubbleManager = villager.getBubbleManager();
+        // TODO: potential bug: use elapsed ticks for bubble updates; partialTick is interpolation progress,
+        //   so treating it as a delta can make bubble lifetimes depend on frame rate.
         bubbleManager.tick(event.getPartialTick());
 
         // Gating after the tick: expiry has to keep advancing while bubbles are hidden

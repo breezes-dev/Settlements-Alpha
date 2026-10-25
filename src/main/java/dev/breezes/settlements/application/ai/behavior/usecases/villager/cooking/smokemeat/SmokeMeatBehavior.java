@@ -141,7 +141,7 @@ public class SmokeMeatBehavior extends VillagerStateMachineBehavior {
     protected void onBehaviorStop(@Nonnull Level world, @Nonnull BaseVillager villager) {
         villager.getNavigationManager().stop();
         villager.clearHeldItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
 
         // Lit reset is handled by teardownAll() via the tracked obligation; clear the handle
         // for next-run reuse (this behavior instance is reused across runs).

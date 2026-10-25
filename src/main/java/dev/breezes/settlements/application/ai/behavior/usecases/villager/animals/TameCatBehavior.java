@@ -231,7 +231,7 @@ public class TameCatBehavior extends VillagerStateMachineBehavior {
         }
 
         villager.clearHeldItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         this.shouldRewardExperience = false;
     }
 

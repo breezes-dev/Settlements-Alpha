@@ -82,7 +82,7 @@ public class ChartRaidersBehavior extends VillagerStateMachineBehavior {
         }
 
         villager.clearHeldItem();
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
     }
 
     private StepResult chartRaiders(@Nonnull BehaviorContext<BaseVillager> context) {

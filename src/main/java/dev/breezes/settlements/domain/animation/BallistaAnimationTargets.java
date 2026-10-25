@@ -5,10 +5,12 @@ import lombok.NoArgsConstructor;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
+import java.util.List;
+
 /**
- * The ballista bones its clips drive, each value an offset from the bone's rest pose.
+ * Animation targets for ballista model parts, with values relative to their rest transforms.
  * <p>
- * The aim bone has no target: aim is applied procedurally and never enters a clip.
+ * The aim bone has no clip target.
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class BallistaAnimationTargets {
@@ -28,33 +30,36 @@ public final class BallistaAnimationTargets {
 
     public static final AnimationTarget<Vector3f> CRANKSHAFT_ROTATION = rotation("crankshaft");
 
-    // Unit-neutral multiplication preserves the authored rope length when the target is absent
-    public static final AnimationTarget<Vector3f> CONNECTOR_SCALE = AnimationTarget.<Vector3f>builder()
-            .id("model_part:ballista_connector.scale")
-            .valueType(Vector3f.class)
-            .neutralValue(new Vector3f(1.0F, 1.0F, 1.0F))
-            .interpolator(Interpolators.VECTOR3F)
-            .policy(AnimationTargetPolicy.MULTIPLICATIVE)
-            .build();
+    /**
+     * Scale factors for the connector rope, relative to its authored length.
+     */
+    public static final AnimationTarget<Vector3f> CONNECTOR_SCALE =
+            AnimationTarget.scale("model_part:ballista_connector.scale", AnimationBone.part("connector"));
+
+    // Keep after every channel so static initialization supplies initialized channel references
+
+    /**
+     * The ballista's rig.
+     */
+    public static final AnimationRig RIG = AnimationRig.of("ballista", List.of(
+            GIMBAL_ROTATION,
+            GIMBAL_TRANSLATION,
+            LIMB_LEFT_OUTER_ROTATION,
+            LIMB_LEFT_TIP_ROTATION,
+            STRING_LEFT_ROTATION,
+            LIMB_RIGHT_OUTER_ROTATION,
+            LIMB_RIGHT_TIP_ROTATION,
+            STRING_RIGHT_ROTATION,
+            PUSHER_TRANSLATION,
+            CRANKSHAFT_ROTATION,
+            CONNECTOR_SCALE));
 
     private static AnimationTarget<Vector3f> rotation(String bone) {
-        return AnimationTarget.<Vector3f>builder()
-                .id("model_part:ballista_" + bone + ".rotation")
-                .valueType(Vector3f.class)
-                .neutralValue(new Vector3f())
-                .interpolator(Interpolators.VECTOR3F)
-                .policy(AnimationTargetPolicy.ADDITIVE)
-                .build();
+        return AnimationTarget.rotation("model_part:ballista_" + bone + ".rotation", AnimationBone.part(bone));
     }
 
     private static AnimationTarget<Vec3> translation(String bone) {
-        return AnimationTarget.<Vec3>builder()
-                .id("model_part:ballista_" + bone + ".translation")
-                .valueType(Vec3.class)
-                .neutralValue(Vec3.ZERO)
-                .interpolator(Interpolators.VEC3)
-                .policy(AnimationTargetPolicy.ADDITIVE)
-                .build();
+        return AnimationTarget.translation("model_part:ballista_" + bone + ".translation", AnimationBone.part(bone));
     }
 
 }

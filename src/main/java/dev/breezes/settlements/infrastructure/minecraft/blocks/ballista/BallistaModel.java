@@ -2,9 +2,10 @@ package dev.breezes.settlements.infrastructure.minecraft.blocks.ballista;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.breezes.settlements.domain.animation.AnimationFrame;
+import dev.breezes.settlements.domain.animation.AnimationPose;
 import dev.breezes.settlements.domain.animation.BallistaAnimationTargets;
 import dev.breezes.settlements.domain.ballista.BallistaGeometry;
+import dev.breezes.settlements.infrastructure.rendering.animation.ModelPartRigBinding;
 import dev.breezes.settlements.shared.annotations.functional.ClientSide;
 import dev.breezes.settlements.shared.util.ResourceLocationUtil;
 import net.minecraft.client.model.geom.ModelLayerLocation;
@@ -19,10 +20,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * The ballista's rig, authored in entity-model space with y pointing down.
@@ -35,47 +37,41 @@ public class BallistaModel {
     private static final ResourceLocation TEXTURE = ResourceLocationUtil.mod("textures/entity/ballista.png");
 
     private final ModelPart root;
-    private final List<ModelPart> allParts;
-
     private final ModelPart turret;
-    private final ModelPart gimbal;
-    private final ModelPart limbLeftOuter;
-    private final ModelPart limbLeftTip;
-    private final ModelPart stringLeft;
-    private final ModelPart limbRightOuter;
-    private final ModelPart limbRightTip;
-    private final ModelPart stringRight;
-    private final ModelPart pusher;
-    private final ModelPart connector;
-    private final ModelPart crankshaft;
+    private final ModelPartRigBinding rigBinding;
 
     /**
      * Every bone from the root down to the bolt socket, outermost first.
      */
     private final List<ModelPart> boltSocketChain;
 
+    /**
+     * @throws IllegalArgumentException if a model-part channel of the ballista rig names a part the layer lacks
+     */
     public BallistaModel(@Nonnull ModelPart root) {
         this.root = root;
-        this.allParts = root.getAllParts().toList();
-
         this.turret = root.getChild("turret");
-        this.gimbal = this.turret.getChild("gimbal");
-        ModelPart cradle = this.gimbal.getChild("cradle");
+        ModelPart gimbal = this.turret.getChild("gimbal");
+        ModelPart cradle = gimbal.getChild("cradle");
+        ModelPart limbLeftOuter = cradle.getChild("limb_left").getChild("limb_left_outer");
+        ModelPart limbRightOuter = cradle.getChild("limb_right").getChild("limb_right_outer");
+        ModelPart pusher = cradle.getChild("pusher");
 
-        this.limbLeftOuter = cradle.getChild("limb_left").getChild("limb_left_outer");
-        this.limbLeftTip = this.limbLeftOuter.getChild("limb_left_tip");
-        this.stringLeft = this.limbLeftOuter.getChild("string_left");
+        Map<String, ModelPart> partsByName = Map.ofEntries(
+                Map.entry("gimbal", gimbal),
+                Map.entry("limb_left_outer", limbLeftOuter),
+                Map.entry("limb_left_tip", limbLeftOuter.getChild("limb_left_tip")),
+                Map.entry("string_left", limbLeftOuter.getChild("string_left")),
+                Map.entry("limb_right_outer", limbRightOuter),
+                Map.entry("limb_right_tip", limbRightOuter.getChild("limb_right_tip")),
+                Map.entry("string_right", limbRightOuter.getChild("string_right")),
+                Map.entry("pusher", pusher),
+                Map.entry("connector", cradle.getChild("connector")),
+                Map.entry("crankshaft", cradle.getChild("crankshaft")));
+        this.rigBinding = new ModelPartRigBinding(BallistaAnimationTargets.RIG, root,
+                name -> Optional.ofNullable(partsByName.get(name)));
 
-        this.limbRightOuter = cradle.getChild("limb_right").getChild("limb_right_outer");
-        this.limbRightTip = this.limbRightOuter.getChild("limb_right_tip");
-        this.stringRight = this.limbRightOuter.getChild("string_right");
-
-        this.pusher = cradle.getChild("pusher");
-        this.connector = cradle.getChild("connector");
-        this.crankshaft = cradle.getChild("crankshaft");
-
-        this.boltSocketChain = List.of(root, this.turret, this.gimbal, cradle, this.pusher,
-                this.pusher.getChild("bolt_socket"));
+        this.boltSocketChain = List.of(root, this.turret, gimbal, cradle, pusher, pusher.getChild("bolt_socket"));
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -199,31 +195,16 @@ public class BallistaModel {
 
     /**
      * Poses the whole rig from its rest pose: the aim bone turned about its own pivot by the given model-space
-     * rotations, in radians, and every clip-driven bone offset by the frame. Whatever an earlier call left on the rig
-     * is discarded rather than added to.
+     * rotations, in radians, and every clip-driven bone moved by the pose. Whatever an earlier call left on the rig is
+     * discarded rather than added to. Allocates nothing.
+     *
+     * @throws IllegalArgumentException if the pose is not on the ballista rig
      */
-    public void pose(float turretYRot, float turretXRot, @Nonnull AnimationFrame frame) {
-        for (ModelPart part : this.allParts) {
-            part.resetPose();
-        }
-
+    public void pose(float turretYRot, float turretXRot, @Nonnull AnimationPose pose) {
+        this.rigBinding.resetToRest();
         this.turret.yRot += turretYRot;
         this.turret.xRot += turretXRot;
-
-        applyRotation(this.gimbal, frame.get(BallistaAnimationTargets.GIMBAL_ROTATION));
-        applyTranslation(this.gimbal, frame.get(BallistaAnimationTargets.GIMBAL_TRANSLATION));
-
-        applyRotation(this.limbLeftOuter, frame.get(BallistaAnimationTargets.LIMB_LEFT_OUTER_ROTATION));
-        applyRotation(this.limbLeftTip, frame.get(BallistaAnimationTargets.LIMB_LEFT_TIP_ROTATION));
-        applyRotation(this.stringLeft, frame.get(BallistaAnimationTargets.STRING_LEFT_ROTATION));
-
-        applyRotation(this.limbRightOuter, frame.get(BallistaAnimationTargets.LIMB_RIGHT_OUTER_ROTATION));
-        applyRotation(this.limbRightTip, frame.get(BallistaAnimationTargets.LIMB_RIGHT_TIP_ROTATION));
-        applyRotation(this.stringRight, frame.get(BallistaAnimationTargets.STRING_RIGHT_ROTATION));
-
-        applyTranslation(this.pusher, frame.get(BallistaAnimationTargets.PUSHER_TRANSLATION));
-        applyRotation(this.crankshaft, frame.get(BallistaAnimationTargets.CRANKSHAFT_ROTATION));
-        applyScale(this.connector, frame.get(BallistaAnimationTargets.CONNECTOR_SCALE));
+        this.rigBinding.apply(pose);
     }
 
     public void render(@Nonnull PoseStack poseStack,
@@ -244,25 +225,6 @@ public class BallistaModel {
         for (ModelPart part : this.boltSocketChain) {
             part.translateAndRotate(poseStack);
         }
-    }
-
-    // Clip values are offsets from the rest pose, so each lands on top of the baked pose resetPose restored
-    private static void applyRotation(@Nonnull ModelPart part, @Nonnull Vector3f rotation) {
-        part.xRot += rotation.x();
-        part.yRot += rotation.y();
-        part.zRot += rotation.z();
-    }
-
-    private static void applyTranslation(@Nonnull ModelPart part, @Nonnull Vec3 translation) {
-        part.x += (float) translation.x;
-        part.y += (float) translation.y;
-        part.z += (float) translation.z;
-    }
-
-    private static void applyScale(@Nonnull ModelPart part, @Nonnull Vector3f scale) {
-        part.xScale *= scale.x();
-        part.yScale *= scale.y();
-        part.zScale *= scale.z();
     }
 
 }

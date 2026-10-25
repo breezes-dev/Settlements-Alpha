@@ -4,15 +4,38 @@ import dev.breezes.settlements.domain.presentation.ArmConfiguration;
 import dev.breezes.settlements.shared.util.ResourceLocationUtil;
 import dev.breezes.settlements.shared.util.RotationUtil;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LocomotionAnimations {
+
+    /**
+     * The constant standing posture: the leg splay.
+     */
+    public static KeyframeAnimation standingPose() {
+        return KeyframeAnimation.fromTracks()
+                .id(ResourceLocationUtil.mod("animation/locomotion/standing_pose"))
+                .owns(VillagerAnimationRig.LEG_ROTATION)
+                .arms(ArmConfiguration.BOTH_CROSSED)
+                .track(AnimationTrack.<Vector3f>builder()
+                        .target(AnimationTargets.LEG_LEFT_ROTATION)
+                        .keyframes(List.of(
+                                new Keyframe<>(0, RotationUtil.degrees(0.0f, -7.5f, -1.0f), Easing.LINEAR)
+                        ))
+                        .build())
+                .track(AnimationTrack.<Vector3f>builder()
+                        .target(AnimationTargets.LEG_RIGHT_ROTATION)
+                        .keyframes(List.of(
+                                new Keyframe<>(0, RotationUtil.degrees(0.0f, 10.0f, 1.0f), Easing.LINEAR)
+                        ))
+                        .build())
+                .build();
+    }
 
     public static KeyframeAnimation stroll() {
         return gait("stroll", 25,
@@ -31,11 +54,11 @@ public final class LocomotionAnimations {
                         p(5, 0, 0.35, 0), p(7, 0, 0.09, 0), p(8, 0, 0.01, 0), p(9, 0, 0, 0), p(10, 0, 0.08, 0),
                         p(14, 0, 0.42, 0), p(15, 0, 0.49, 0), p(16, 0, 0.49, 0), p(17, 0, 0.42, 0), p(20, 0, 0.08, 0),
                         p(21, 0, 0.01, 0), p(22, 0, 0.01, 0), p(23, 0, 0.07, 0), p(24, 0, 0.16, 0), p(25, 0, 0.28, 0))),
-                rotations(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_LEFT_ROTATION, Easing.CUBIC, keys(
                         r(0, -5, 0, 0), r(6, -10, 0, 0), r(13, 15, 0, 0), r(19, 25, 0, 0), r(25, -5, 0, 0))),
                 translations(AnimationTargets.LEG_LEFT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, -0.2, -3.8), p(6, 0, -0.1, 0), p(13, 0, 0.3, 0.5), p(19, 0, -1.7, -2.5), p(25, 0, -0.2, -3.8))),
-                rotations(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_RIGHT_ROTATION, Easing.CUBIC, keys(
                         r(0, 15, 0, 0), r(6, 25, 0, 0), r(13, -5, 0, 0), r(19, -10, 0, 0), r(25, 15, 0, 0))),
                 translations(AnimationTargets.LEG_RIGHT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0.3, 0.5), p(6, 0, -1.7, -2.5), p(13, 0, -0.2, -3.8), p(19, 0, -0.1, 0), p(25, 0, 0.3, 0.5))),
@@ -50,7 +73,7 @@ public final class LocomotionAnimations {
                         r(0, -4, 4, 0), r(6, -1, 0, 0), r(13, -4, -4, 0), r(19, -1, 0, 0), r(25, -4, 4, 0))),
                 translations(AnimationTargets.BODY_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0, 0), p(6, 0, -1.0, 0), p(13, 0, 0, 0), p(19, 0, -1.0, 0), p(25, 0, 0, 0))),
-                rotations(AnimationTargets.HEAD_ROTATION_OVERRIDE, Easing.LINEAR, keys(
+                rotations(AnimationTargets.HEAD_ROTATION, Easing.LINEAR, keys(
                         r(0, 1.68F, 0, 0), r(1, 3.31F, 0, 0), r(2, 4.52F, 0, 0), r(3, 5.0F, 0, 0), r(4, 4.35F, 0, 0),
                         r(5, 2.75F, 0, 0), r(6, 0.74F, 0, 0), r(7, -1.13F, 0, 0), r(8, -2.33F, 0, 0), r(9, -2.5F, 0, 0),
                         r(10, -1.33F, 0, 0), r(11, 0.32F, 0, 0), r(13, 2.18F, 0, 0), r(14, 3.83F, 0, 0), r(15, 4.85F, 0, 0),
@@ -59,11 +82,7 @@ public final class LocomotionAnimations {
                 rotations(AnimationTargets.MONOBROW_ROTATION, Easing.CUBIC, keys(
                         r(0, 0, 0, -1.0F), r(13, 0, 0, 1.0F), r(25, 0, 0, -1.0F))),
                 translations(AnimationTargets.MONOBROW_TRANSLATION, Easing.CUBIC, keys(
-                        p(0, 0, -0.1, 0), p(6, 0, 0, 0), p(13, 0, -0.1, 0), p(19, 0, 0, 0), p(25, 0, -0.1, 0))),
-                translations(AnimationTargets.PUPIL_LEFT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, 0.1, 0, 0))),
-                translations(AnimationTargets.PUPIL_RIGHT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, -0.1, 0, 0))));
+                        p(0, 0, -0.1, 0), p(6, 0, 0, 0), p(13, 0, -0.1, 0), p(19, 0, 0, 0), p(25, 0, -0.1, 0))));
     }
 
     public static KeyframeAnimation walk() {
@@ -76,11 +95,11 @@ public final class LocomotionAnimations {
                         p(0, 0, 0.18, 0), p(1, 0, 0.05, 0), p(2, 0, 0, 0), p(3, 0, 0.05, 0), p(6, 0, 0.45, 0),
                         p(7, 0, 0.5, 0), p(8, 0, 0.45, 0), p(11, 0, 0.05, 0), p(12, 0, 0, 0), p(13, 0, 0.05, 0),
                         p(16, 0, 0.45, 0), p(17, 0, 0.5, 0), p(18, 0, 0.45, 0), p(20, 0, 0.18, 0))),
-                rotations(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_LEFT_ROTATION, Easing.CUBIC, keys(
                         r(0, -5, 0, 0), r(5, -10, 0, 0), r(10, 10, 0, 0), r(15, 20, 0, 0), r(20, -5, 0, 0))),
                 translations(AnimationTargets.LEG_LEFT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, -0.2, -2.5), p(4, 0, -0.1, 0), p(10, 0, 0.3, 0.5), p(15, 0, -1.7, -1.5), p(20, 0, -0.2, -2.5))),
-                rotations(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_RIGHT_ROTATION, Easing.CUBIC, keys(
                         r(0, 10, 0, 0), r(5, 20, 0, 0), r(10, -5, 0, 0), r(15, -10, 0, 0), r(20, 10, 0, 0))),
                 translations(AnimationTargets.LEG_RIGHT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0.3, 0.5), p(5, 0, -1.7, -1.5), p(10, 0, -0.2, -2.5), p(14, 0, -0.1, 0), p(20, 0, 0.3, 0.5))),
@@ -94,7 +113,7 @@ public final class LocomotionAnimations {
                         r(0, 4, -4, 0), r(5, 6, -3, 0), r(10, 4, 4, 0), r(15, 6, 3, 0), r(20, 4, -4, 0))),
                 translations(AnimationTargets.BODY_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0, 0), p(5, 0, -0.4, 0), p(7, 0, -0.4, 0), p(10, 0, 0, 0), p(15, 0, -0.4, 0), p(17, 0, -0.4, 0), p(20, 0, 0, 0))),
-                rotations(AnimationTargets.HEAD_ROTATION_OVERRIDE, Easing.LINEAR, keys(
+                rotations(AnimationTargets.HEAD_ROTATION, Easing.LINEAR, keys(
                         r(0, 0.59F, 0, 0), r(1, -0.59F, 0, 0), r(2, -1.58F, 0, 0), r(3, -2.0F, 0, 0), r(4, -1.58F, 0, 0),
                         r(5, -0.59F, 0, 0), r(6, 0.59F, 0, 0), r(7, 1.58F, 0, 0), r(8, 2.0F, 0, 0), r(9, 1.58F, 0, 0),
                         r(10, 0.59F, 0, 0), r(11, -0.59F, 0, 0), r(12, -1.58F, 0, 0), r(13, -2.0F, 0, 0), r(14, -1.58F, 0, 0),
@@ -103,11 +122,7 @@ public final class LocomotionAnimations {
                 translations(AnimationTargets.MONOBROW_TRANSLATION, Easing.LINEAR, keys(
                         p(0, 0, 0, 0), p(1, 0, -0.01, 0), p(4, 0, -0.09, 0), p(5, 0, -0.1, 0), p(9, 0, -0.01, 0),
                         p(10, 0, 0, 0), p(11, 0, -0.01, 0), p(14, 0, -0.09, 0), p(15, 0, -0.1, 0), p(16, 0, -0.09, 0),
-                        p(19, 0, -0.01, 0), p(20, 0, 0, 0))),
-                translations(AnimationTargets.PUPIL_LEFT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, 0.1, 0, 0))),
-                translations(AnimationTargets.PUPIL_RIGHT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, -0.1, 0, 0))));
+                        p(19, 0, -0.01, 0), p(20, 0, 0, 0))));
     }
 
     public static KeyframeAnimation jog() {
@@ -116,11 +131,11 @@ public final class LocomotionAnimations {
                         r(0, -2.5F, -5.0F, -6.25F), r(2, -10, -8, -10), r(4, -2.5F, -5.0F, -6.25F), r(6, 5, 0, 0),
                         r(8, -2.5F, 5.0F, 6.25F), r(10, -10, 8, 10), r(12, -2.5F, 5.0F, 6.25F), r(14, 5, 0, 0),
                         r(16, -2.5F, -5.0F, -6.25F))),
-                rotations(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_LEFT_ROTATION, Easing.CUBIC, keys(
                         r(0, -30, 0, 0), r(8, 30, 0, 0), r(16, -30, 0, 0))),
                 translations(AnimationTargets.LEG_LEFT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0, -3.0), p(4, 0, 0.5, 0), p(8, 0, -1.0, 2.0), p(12, 0, -2.0, -4.0), p(16, 0, 0, -3.0))),
-                rotations(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_RIGHT_ROTATION, Easing.CUBIC, keys(
                         r(0, 30, 0, 0), r(8, -30, 0, 0), r(16, 30, 0, 0))),
                 translations(AnimationTargets.LEG_RIGHT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, -1.0, 2.0), p(4, 0, -2.0, -4.0), p(8, 0, 0, -3.0), p(12, 0, 0.5, 0), p(16, 0, -1.0, 2.0))),
@@ -131,7 +146,7 @@ public final class LocomotionAnimations {
                         r(0, 10, -3, -2), r(4, 20, -0.38F, -0.25F), r(8, 10, 3, 2), r(12, 20, 0.05F, 0.03F), r(16, 10, -3, -2))),
                 translations(AnimationTargets.BODY_TRANSLATION, Easing.CUBIC, keys(
                         p(2, 0, 0, 0), p(4, 0, -1.5, 0), p(6, 0, -1.5, 0), p(8, 0, 0, 0), p(10, 0, 0, 0), p(12, 0, -1.5, 0), p(14, 0, -1.5, 0), p(16, 0, 0, 0))),
-                rotations(AnimationTargets.HEAD_ROTATION_OVERRIDE, Easing.LINEAR, keys(
+                rotations(AnimationTargets.HEAD_ROTATION, Easing.LINEAR, keys(
                         r(0, -20, 0, 0), r(4, -10, 0, 0), r(8, -20, 0, 0), r(12, -10, 0, 0), r(16, -20, 0, 0))),
                 translations(AnimationTargets.MONOBROW_TRANSLATION, Easing.LINEAR, keys(
                         p(0, 0, -1.0, 0), p(4, 0, -0.7, 0), p(8, 0, -1.0, 0), p(12, 0, -0.7, 0), p(16, 0, -1.0, 0))),
@@ -142,7 +157,7 @@ public final class LocomotionAnimations {
                 scales(AnimationTargets.EYEBALL_LEFT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 1.5F, 1.0F))),
                 translations(AnimationTargets.PUPIL_LEFT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, 0.2, 0, 0))),
+                        p(0, 0.1, 0, 0))),
                 scales(AnimationTargets.PUPIL_LEFT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 0.7F, 1.0F))),
                 translations(AnimationTargets.EYELID_RIGHT_TRANSLATION, Easing.LINEAR, keys(
@@ -152,7 +167,7 @@ public final class LocomotionAnimations {
                 scales(AnimationTargets.EYEBALL_RIGHT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 1.5F, 1.0F))),
                 translations(AnimationTargets.PUPIL_RIGHT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, -0.2, 0, 0))),
+                        p(0, -0.1, 0, 0))),
                 scales(AnimationTargets.PUPIL_RIGHT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 0.7F, 1.0F))),
                 scales(AnimationTargets.MOUTH_SCALE, Easing.LINEAR, keys(
@@ -163,13 +178,13 @@ public final class LocomotionAnimations {
         return gait("run", 10,
                 rotations(AnimationTargets.ARMS_CROSSED_ROTATION, Easing.CUBIC, keys(
                         r(0, -20, -10, -5), r(3, 0, 0, 0), r(5, -20, 10, 5), r(8, 0, 0, 0), r(10, -20, -10, -5))),
-                rotations(AnimationTargets.HEAD_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.HEAD_ROTATION, Easing.CUBIC, keys(
                         r(0, -5, 0, -5), r(3, 2.5F, 0, 0), r(5, -5, 0, 5), r(8, 2.5F, 0, 0), r(10, -5, 0, -5))),
-                rotations(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_LEFT_ROTATION, Easing.CUBIC, keys(
                         r(0, -30, 0, 0), r(5, 30, 0, 0), r(10, -30, 0, 0))),
                 translations(AnimationTargets.LEG_LEFT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0, -3.0), p(3, 0, 0.5, 0), p(5, 0, -1.0, 2.0), p(8, 0, -2.0, -4.0), p(10, 0, 0, -3.0))),
-                rotations(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_RIGHT_ROTATION, Easing.CUBIC, keys(
                         r(0, 30, 0, 0), r(5, -30, 0, 0), r(10, 30, 0, 0))),
                 translations(AnimationTargets.LEG_RIGHT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, -1.0, 2.0), p(3, 0, -2.0, -4.0), p(5, 0, 0, -3.0), p(8, 0, 0.5, 0), p(10, 0, -1.0, 2.0))),
@@ -188,7 +203,7 @@ public final class LocomotionAnimations {
                 scales(AnimationTargets.EYEBALL_LEFT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 1.5F, 1.0F))),
                 translations(AnimationTargets.PUPIL_LEFT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, 0.2, 0, 0))),
+                        p(0, 0.1, 0, 0))),
                 scales(AnimationTargets.PUPIL_LEFT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 0.7F, 1.0F))),
                 translations(AnimationTargets.EYELID_RIGHT_TRANSLATION, Easing.LINEAR, keys(
@@ -198,7 +213,7 @@ public final class LocomotionAnimations {
                 scales(AnimationTargets.EYEBALL_RIGHT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 1.5F, 1.0F))),
                 translations(AnimationTargets.PUPIL_RIGHT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, -0.2, 0, 0))),
+                        p(0, -0.1, 0, 0))),
                 scales(AnimationTargets.PUPIL_RIGHT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 0.7F, 1.0F))),
                 scales(AnimationTargets.MOUTH_SCALE, Easing.LINEAR, keys(
@@ -211,13 +226,13 @@ public final class LocomotionAnimations {
                         r(0, -20, -10, -5), r(3, 0, 0, 0), r(5, -20, 10, 5), r(8, 0, 0, 0), r(10, -20, -10, -5))),
                 translations(AnimationTargets.ARMS_CROSSED_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0, -2.0), p(3, 0, 2.0, 0), p(5, 0, 0, -2.0), p(8, 0, 2.0, 0), p(10, 0, 0, -2.0))),
-                rotations(AnimationTargets.HEAD_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.HEAD_ROTATION, Easing.CUBIC, keys(
                         r(0, -5, 0, -5), r(3, 2.5F, 0, 0), r(5, -5, 0, 5), r(8, 2.5F, 0, 0), r(10, -5, 0, -5))),
-                rotations(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_LEFT_ROTATION, Easing.CUBIC, keys(
                         r(0, -30, 0, 0), r(5, 30, 0, 0), r(10, -30, 0, 0))),
                 translations(AnimationTargets.LEG_LEFT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0, -3.0), p(3, 0, 0.5, 0), p(5, 0, -1.0, 2.0), p(8, 0, -2.0, -4.0), p(10, 0, 0, -3.0))),
-                rotations(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE, Easing.CUBIC, keys(
+                rotations(AnimationTargets.LEG_RIGHT_ROTATION, Easing.CUBIC, keys(
                         r(0, 30, 0, 0), r(5, -30, 0, 0), r(10, 30, 0, 0))),
                 translations(AnimationTargets.LEG_RIGHT_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, -1.0, 2.0), p(3, 0, -2.0, -4.0), p(5, 0, 0, -3.0), p(8, 0, 0.5, 0), p(10, 0, -1.0, 2.0))),
@@ -234,7 +249,7 @@ public final class LocomotionAnimations {
                 scales(AnimationTargets.EYEBALL_LEFT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 2.5F, 1.0F))),
                 translations(AnimationTargets.PUPIL_LEFT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, 0.2, 0, 0))),
+                        p(0, 0.1, 0, 0))),
                 // Return to the opening scale before the loop seam to keep dilation continuous.
                 scales(AnimationTargets.PUPIL_LEFT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 0.3F, 1.0F), s(1, 1.0F, 0.4F, 1.0F), s(10, 1.0F, 0.3F, 1.0F))),
@@ -243,7 +258,7 @@ public final class LocomotionAnimations {
                 scales(AnimationTargets.EYEBALL_RIGHT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 2.5F, 1.0F))),
                 translations(AnimationTargets.PUPIL_RIGHT_TRANSLATION, Easing.LINEAR, keys(
-                        p(0, -0.2, 0, 0))),
+                        p(0, -0.1, 0, 0))),
                 scales(AnimationTargets.PUPIL_RIGHT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 0.3F, 1.0F), s(1, 1.0F, 0.4F, 1.0F), s(10, 1.0F, 0.3F, 1.0F))),
                 translations(AnimationTargets.MOUTH_TRANSLATION, Easing.CUBIC, keys(
@@ -254,14 +269,16 @@ public final class LocomotionAnimations {
 
     @SafeVarargs
     private static KeyframeAnimation gait(@Nonnull String name, int durationTicks, AnimationTrack<?>... tracks) {
-        // Each gait now carries a different channel count (face/eye tracks appear only on the faster
+        // Each gait carries a different channel count (face/eye tracks appear only on the faster
         // gaits), so tracks are applied by iteration rather than fixed positional indexing.
         TrackAnimationBuilder builder = KeyframeAnimation.fromTracks()
                 .id(ResourceLocationUtil.mod("animation/locomotion/" + name))
                 .durationTicks(durationTicks)
                 .loopMode(LoopMode.LOOP)
-                .blendInTicks(3)
-                .blendOutTicks(3)
+                // Head tracks stay additive so a moving villager keeps looking where vanilla aims its head
+                .owns(VillagerAnimationRig.LEG_ROTATION)
+                // The gait's body bob replaces breathing rather than stacking a second bob onto it
+                .suppresses(SuppressibleComponent.BREATH)
                 .arms(ArmConfiguration.BOTH_CROSSED);
         for (AnimationTrack<?> track : tracks) {
             builder = builder.track(track);

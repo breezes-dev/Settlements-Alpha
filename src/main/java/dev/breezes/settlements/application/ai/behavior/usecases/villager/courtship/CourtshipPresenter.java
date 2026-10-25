@@ -204,7 +204,7 @@ public final class CourtshipPresenter {
      */
     public void presentEnd(@Nonnull BaseVillager self, @Nonnull UUID sessionId, long gameTime) {
         self.clearHeldItem();
-        self.setMotion(AnimationArchetype.IDLE);
+        self.setMotion(AnimationArchetype.NONE);
         this.villagerBubbleService.applyCommand(self, new BubbleCommand.RemoveByOwner(BubbleChannel.BEHAVIOR, ownerKey(sessionId)), gameTime);
     }
 

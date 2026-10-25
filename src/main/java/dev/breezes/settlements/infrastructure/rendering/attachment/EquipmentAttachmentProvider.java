@@ -1,5 +1,6 @@
 package dev.breezes.settlements.infrastructure.rendering.attachment;
 
+import dev.breezes.settlements.domain.animation.VillagerAnimationSnapshot;
 import dev.breezes.settlements.domain.attachment.AttachmentContent;
 import dev.breezes.settlements.domain.attachment.AttachmentProvider;
 import dev.breezes.settlements.domain.attachment.RenderableAttachment;
@@ -20,7 +21,8 @@ import java.util.List;
 public final class EquipmentAttachmentProvider implements AttachmentProvider {
 
     @Override
-    public List<RenderableAttachment> attachmentsFor(@Nonnull BaseVillager villager, float partialTicks) {
+    public List<RenderableAttachment> attachmentsFor(@Nonnull BaseVillager villager,
+                                                     @Nonnull VillagerAnimationSnapshot snapshot) {
         return EquipmentLookup.find(villager)
                 .map(EquipmentAttachmentProvider::attachmentsFor)
                 .orElseGet(List::of);

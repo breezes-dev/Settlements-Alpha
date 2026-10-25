@@ -1,72 +1,75 @@
 package dev.breezes.settlements.domain.animation;
 
-import lombok.Builder;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
+/**
+ * One animatable channel of a bone: its rotation, translation, or scale, keyed with values of type V.
+ * Separately constructed targets with the same id represent the same channel and compare equal.
+ */
 @Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AnimationTarget<V> {
 
     /**
-     * Globally unique target identity. Equality intentionally uses only this id so separately resolved
-     * references to the same target still address the same sampled frame value.
+     * The globally unique identifier for this channel.
      */
     private final String id;
-    private final Class<V> valueType;
-    private final V neutralValue;
-    private final Interpolator<V> interpolator;
-    private final TargetArithmetic<V> arithmetic;
-    private final AnimationTargetPolicy policy;
 
-    @Builder
-    private AnimationTarget(@Nonnull String id,
-                            @Nonnull Class<V> valueType,
-                            @Nonnull V neutralValue,
-                            @Nonnull Interpolator<V> interpolator,
-                            @Nullable TargetArithmetic<V> arithmetic,
-                            @Nonnull AnimationTargetPolicy policy) {
-        this.id = id;
-        this.valueType = valueType;
-        this.neutralValue = neutralValue;
-        this.interpolator = interpolator;
-        this.arithmetic = arithmetic == null ? TargetArithmetics.forValueType(valueType) : arithmetic;
-        this.policy = policy;
-    }
+    private final AnimationBone bone;
 
-    public V blend(@Nonnull V from, @Nonnull V to, float t) {
-        return this.interpolator.interpolate(from, to, t);
+    private final AnimationChannelKind kind;
+
+    /**
+     * Creates the bone's rotation channel.
+     */
+    public static AnimationTarget<Vector3f> rotation(@Nonnull String id, @Nonnull AnimationBone bone) {
+        return new AnimationTarget<>(id, bone, AnimationChannelKind.ROTATION);
     }
 
     /**
-     * Folds an overriding value onto a base value according to this target's policy. Only valid for
-     * policies that are not coverage-tracked, since two values and a weight are all this signature
-     * carries.
+     * Creates the bone's translation channel.
      */
-    public V compose(@Nonnull V base, @Nonnull V over, float weight) {
-        float clampedWeight = Math.clamp(weight, 0.0F, 1.0F);
-        if (clampedWeight <= 0.0F) {
-            return base;
+    public static AnimationTarget<Vec3> translation(@Nonnull String id, @Nonnull AnimationBone bone) {
+        return new AnimationTarget<>(id, bone, AnimationChannelKind.TRANSLATION);
+    }
+
+    /**
+     * Creates the bone's scale channel.
+     */
+    public static AnimationTarget<Vector3f> scale(@Nonnull String id, @Nonnull AnimationBone bone) {
+        return new AnimationTarget<>(id, bone, AnimationChannelKind.SCALE);
+    }
+
+    /**
+     * Reads one component of a keyed value, X, Y, or Z by axis 0, 1, or 2.
+     *
+     * @throws IllegalStateException    if the value is neither a Vector3f nor a Vec3
+     * @throws IllegalArgumentException if the value is a vector and the axis is outside [0, 2]
+     */
+    float component(@Nonnull V value, int axis) {
+        if (value instanceof Vector3f vector) {
+            return switch (axis) {
+                case 0 -> vector.x();
+                case 1 -> vector.y();
+                case 2 -> vector.z();
+                default -> throw new IllegalArgumentException("Axis must be 0, 1, or 2, not " + axis);
+            };
         }
-
-        return switch (this.policy) {
-            case ADDITIVE -> this.composeAdditive(base, over, clampedWeight);
-            case MULTIPLICATIVE -> this.composeMultiplicative(base, over, clampedWeight);
-            case ABSOLUTE -> this.blend(base, over, clampedWeight);
-            case BLENDED_ABSOLUTE -> throw new UnsupportedOperationException(
-                    "Target %s is coverage-tracked and must be composed through AnimationFrame".formatted(this.id));
-        };
-    }
-
-    private V composeAdditive(@Nonnull V base, @Nonnull V over, float weight) {
-        V delta = this.arithmetic.subtract(over, this.neutralValue);
-        return this.arithmetic.add(base, this.arithmetic.scale(delta, weight));
-    }
-
-    private V composeMultiplicative(@Nonnull V base, @Nonnull V over, float weight) {
-        V factor = this.blend(this.neutralValue, over, weight);
-        return this.arithmetic.multiply(base, factor);
+        if (value instanceof Vec3 vector) {
+            return switch (axis) {
+                case 0 -> (float) vector.x;
+                case 1 -> (float) vector.y;
+                case 2 -> (float) vector.z;
+                default -> throw new IllegalArgumentException("Axis must be 0, 1, or 2, not " + axis);
+            };
+        }
+        throw new IllegalStateException("Target %s holds no vector components".formatted(this.id));
     }
 
     @Override

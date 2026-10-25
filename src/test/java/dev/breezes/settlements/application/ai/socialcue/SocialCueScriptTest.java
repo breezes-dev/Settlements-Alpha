@@ -88,7 +88,7 @@ class SocialCueScriptTest {
     void stepCount_matchesListSize() {
         // Arrange
         SocialCueScript script = SocialCueScript.of(List.of(
-                new CueStep.Gesture(AnimationArchetype.IDLE),
+                new CueStep.Gesture(AnimationArchetype.NONE),
                 new CueStep.Wait(ClockTicks.of(5)),
                 new CueStep.Wait(ClockTicks.of(5))
         ));

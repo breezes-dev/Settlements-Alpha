@@ -150,7 +150,7 @@ public class FishingBehavior extends VillagerStateMachineBehavior {
             this.fishedEntity.discard();
         }
 
-        villager.setMotion(AnimationArchetype.IDLE);
+        villager.setMotion(AnimationArchetype.NONE);
         villager.clearHeldItem();
         villager.setBobberDeployed(false);
 

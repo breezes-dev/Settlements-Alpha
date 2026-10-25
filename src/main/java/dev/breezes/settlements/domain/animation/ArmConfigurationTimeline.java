@@ -1,12 +1,16 @@
 package dev.breezes.settlements.domain.animation;
 
-import dev.breezes.settlements.domain.presentation.ArmConfiguration;
+import dev.breezes.settlements.domain.presentation.ArmPose;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
+/**
+ * An immutable timeline of arm claims at unique animation ticks. Each keyframe's claims hold until the next keyframe;
+ * the first and last keyframes also hold outside the keyed range.
+ */
 public final class ArmConfigurationTimeline {
 
     public static final ArmConfigurationTimeline EMPTY = new ArmConfigurationTimeline(List.of());
@@ -21,6 +25,11 @@ public final class ArmConfigurationTimeline {
         this.keyframes = sortedKeyframes;
     }
 
+    /**
+     * Creates a timeline from keyframes in any order, or returns EMPTY when none are supplied.
+     *
+     * @throws IllegalArgumentException if two keyframes have the same tick
+     */
     public static ArmConfigurationTimeline of(@Nonnull List<ArmConfigurationKeyframe> keyframes) {
         if (keyframes.isEmpty()) {
             return EMPTY;
@@ -28,27 +37,41 @@ public final class ArmConfigurationTimeline {
         return new ArmConfigurationTimeline(keyframes);
     }
 
-    public Optional<ArmConfiguration> sample(float animationTick) {
+    /**
+     * The pose the clip claims for its left arm at this tick, or null when it leaves that arm unclaimed.
+     */
+    @Nullable
+    public ArmPose leftAt(float animationTick) {
+        int index = this.activeIndex(animationTick);
+        return index < 0 ? null : this.keyframes.get(index).left();
+    }
+
+    /**
+     * The pose the clip claims for its right arm at this tick, or null when it leaves that arm unclaimed.
+     */
+    @Nullable
+    public ArmPose rightAt(float animationTick) {
+        int index = this.activeIndex(animationTick);
+        return index < 0 ? null : this.keyframes.get(index).right();
+    }
+
+    /**
+     * The index of the keyframe in effect at this tick, or -1 for an empty timeline.
+     */
+    private int activeIndex(float animationTick) {
         if (this.keyframes.isEmpty()) {
-            return Optional.empty();
+            return -1;
         }
-
-        ArmConfiguration active = this.keyframes.getFirst().configuration();
-        for (ArmConfigurationKeyframe keyframe : this.keyframes) {
-            if (animationTick < keyframe.tick()) {
-                return Optional.of(active);
+        // Indexing avoids allocating an iterator during sampling. Keep the strict comparison so a NaN tick selects
+        // the final keyframe.
+        int active = 0;
+        for (int index = 1; index < this.keyframes.size(); index++) {
+            if (animationTick < this.keyframes.get(index).tick()) {
+                break;
             }
-            active = keyframe.configuration();
+            active = index;
         }
-        return Optional.of(active);
-    }
-
-    public boolean isEmpty() {
-        return this.keyframes.isEmpty();
-    }
-
-    public List<ArmConfigurationKeyframe> keyframes() {
-        return this.keyframes;
+        return active;
     }
 
     private static void validateUniqueTicks(@Nonnull List<ArmConfigurationKeyframe> keyframes) {

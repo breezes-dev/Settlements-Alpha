@@ -1,17 +1,18 @@
 package dev.breezes.settlements.domain.animation;
 
-import dev.breezes.settlements.domain.presentation.ArmConfiguration;
 import lombok.Builder;
 import lombok.Getter;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 
+/**
+ * A keyframed clip with playback timing and composition declarations, sampled through a {@link BakedAnimation} made
+ * from it for one rig.
+ */
 @Getter
 public final class KeyframeAnimation {
 
@@ -22,6 +23,22 @@ public final class KeyframeAnimation {
     private final int blendOutTicks;
     private final List<AnimationTrack<?>> tracks;
     private final ArmConfigurationTimeline armConfigurationTimeline;
+
+    /**
+     * Ownership declarations in order. A channel named more than once takes the coverage of the last declaration.
+     */
+    private final List<AnimationOwnership> ownership;
+
+    /**
+     * The components this clip suppresses at full strength.
+     */
+    private final Set<SuppressibleComponent> suppressedComponents;
+
+    /**
+     * Whether this clip declares full-body ownership and suppression of every component. Explicit ownership
+     * declarations override the default full coverage.
+     */
+    private final boolean exclusive;
 
     public static TrackAnimationBuilder fromTracks() {
         return new TrackAnimationBuilder();
@@ -34,9 +51,10 @@ public final class KeyframeAnimation {
                               int blendInTicks,
                               int blendOutTicks,
                               @Nonnull List<AnimationTrack<?>> tracks,
-                              @Nullable ArmConfiguration armConfiguration,
-                              @Nullable ArmConfigurationTimeline armConfigurationTimeline,
-                              @Nullable List<ArmConfigurationKeyframe> armConfigurationKeyframes) {
+                              @Nullable List<ArmConfigurationKeyframe> armConfigurationKeyframes,
+                              @Nullable List<AnimationOwnership> ownership,
+                              @Nullable Set<SuppressibleComponent> suppressedComponents,
+                              boolean exclusive) {
         if (durationTicks < 0) {
             throw new IllegalArgumentException("Animation duration must be non-negative");
         }
@@ -50,51 +68,12 @@ public final class KeyframeAnimation {
         this.blendInTicks = blendInTicks;
         this.blendOutTicks = blendOutTicks;
         this.tracks = List.copyOf(tracks);
-        this.armConfigurationTimeline = resolveArmConfigurationTimeline(
-                armConfiguration,
-                armConfigurationTimeline,
-                armConfigurationKeyframes);
-    }
-
-    public Optional<ArmConfiguration> armConfigurationOverride() {
-        return this.armConfigurationAt(0.0F);
-    }
-
-    public Optional<ArmConfiguration> armConfigurationAt(float elapsedTicks) {
-        float animationTick = this.loopMode.resolveTick(elapsedTicks, this.durationTicks);
-        return this.armConfigurationTimeline.sample(animationTick);
-    }
-
-    public AnimationFrame sample(float elapsedTicks) {
-        if (this.tracks.isEmpty()) {
-            return AnimationFrame.EMPTY;
-        }
-
-        float animationTick = this.loopMode.resolveTick(elapsedTicks, this.durationTicks);
-        Map<AnimationTarget<?>, Object> values = HashMap.newHashMap(this.tracks.size());
-        for (AnimationTrack<?> track : this.tracks) {
-            values.put(track.getTarget(), track.sample(animationTick));
-        }
-        return AnimationFrame.ofOwned(values);
-    }
-
-    private static ArmConfigurationTimeline resolveArmConfigurationTimeline(
-            @Nullable ArmConfiguration armConfiguration,
-            @Nullable ArmConfigurationTimeline armConfigurationTimeline,
-            @Nullable List<ArmConfigurationKeyframe> armConfigurationKeyframes) {
-        if (armConfigurationTimeline != null && armConfigurationKeyframes != null && !armConfigurationKeyframes.isEmpty()) {
-            throw new IllegalArgumentException("Use either armConfigurationTimeline or armConfigurationKeyframes, not both");
-        }
-        if (armConfigurationTimeline != null) {
-            return armConfigurationTimeline;
-        }
-        if (armConfigurationKeyframes != null && !armConfigurationKeyframes.isEmpty()) {
-            return ArmConfigurationTimeline.of(armConfigurationKeyframes);
-        }
-        if (armConfiguration != null) {
-            return ArmConfigurationTimeline.of(List.of(new ArmConfigurationKeyframe(0, armConfiguration)));
-        }
-        return ArmConfigurationTimeline.EMPTY;
+        this.armConfigurationTimeline = armConfigurationKeyframes == null
+                ? ArmConfigurationTimeline.EMPTY
+                : ArmConfigurationTimeline.of(armConfigurationKeyframes);
+        this.ownership = ownership == null ? List.of() : List.copyOf(ownership);
+        this.suppressedComponents = suppressedComponents == null ? Set.of() : Set.copyOf(suppressedComponents);
+        this.exclusive = exclusive;
     }
 
 }

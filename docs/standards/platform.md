@@ -41,16 +41,23 @@ recurses until the stack overflows. Give it a distinct name.
 
 ### P8 — A supplementary entity render re-enters every render callback
 
-Drawing an entity a second time in a frame vanilla has already drawn it in — to feed an effect buffer such as the
-outline pass — re-enters the entity render events and every render layer on that entity. Nothing in the callback
-distinguishes the second call from a new frame, so a listener that advances time-based state, or draws decoration the
-effect has no use for, runs twice against one frame: animation ages at double rate, timers expire early, and per-call
-work doubles for every entity in the pass.
+Drawing an entity again in a frame — to feed an effect buffer such as the outline pass — re-enters the entity render
+events and every render layer on that entity. Nothing in the callback distinguishes the extra call from a new frame, so
+a listener that advances state on every call, or draws decoration the effect has no use for, runs twice against one
+frame: anything aged per call ages at double rate, timers expire early, and per-call work doubles for every entity in
+the pass.
 
-The pass must therefore be identifiable from inside the callback. Mark the `MultiBufferSource` the supplementary pass
-hands to the dispatcher, and have every entity-render listener that is not part of the effect return on seeing that
-mark. **A listener that omits the check fails silently** — no exception, only something running at the wrong rate — so
-adding one is a seam that has to be walked, not a change that announces itself.
+State advanced once per sample — keyed to the entity's own tick count and the render's partial tick, and changed only
+when that key moves on — is immune: whichever call reaches a sample first advances it, and any other finds it already
+there. The order is not fixed. A supplementary pass that picks its entities differently from vanilla's own pass, by
+frustum alone for instance, can draw an entity vanilla skipped that frame, so its call may be the only one; and while
+the game is paused or ticks are frozen, the next frame's vanilla pass samples the same key after it. Such a pass must
+render with the partial tick vanilla's pass uses for that entity, or the two calls are two samples.
+
+Everything else must identify the pass from inside the callback. Mark the `MultiBufferSource` the supplementary pass
+hands to the dispatcher, and have every listener that does per-call work or draws decoration outside the effect return
+on seeing that mark. **A listener that omits the check fails silently** — no exception, only something running at the
+wrong rate — so adding one is a seam that has to be walked, not a change that announces itself.
 
 ### P9 — A miss is still a `BlockHitResult`
 

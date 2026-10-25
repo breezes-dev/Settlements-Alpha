@@ -30,6 +30,10 @@ public final class ReadBookAnimations {
                 .loopMode(LoopMode.LOOP)
                 .blendInTicks(BLEND_IN_TICKS)
                 .blendOutTicks(BLEND_OUT_TICKS)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .owns(VillagerAnimationRig.LEG_ROTATION)
+                // The eyes read along the line rather than following the look
+                .suppresses(SuppressibleComponent.GAZE)
                 .arms(ArmConfiguration.BOTH_CROSSED)
                 .track(rotation(AnimationTargets.ARMS_CROSSED_ROTATION, List.of(
                         key(0, rotation(-8.8F, 0.0F, 0.0F), Easing.LINEAR),
@@ -61,7 +65,7 @@ public final class ReadBookAnimations {
                         key(30, rotation(-3.0F, 0.0F, 0.0F), Easing.CUBIC),
                         key(47, rotation(-1.35F, 2.0F, 0.0F), Easing.CUBIC),
                         key(60, rotation(0.0F, 0.0F, 0.0F), Easing.CUBIC))))
-                .track(rotation(AnimationTargets.HEAD_ROTATION_OVERRIDE, List.of(
+                .track(rotation(AnimationTargets.HEAD_ROTATION, List.of(
                         key(0, rotation(19.63F, 0.0F, 0.0F), Easing.LINEAR),
                         key(3, rotation(19.96F, 0.0F, 0.0F), Easing.LINEAR),
                         key(7, rotation(19.96F, 0.0F, 0.0F), Easing.LINEAR),
@@ -81,21 +85,21 @@ public final class ReadBookAnimations {
                         key(60, rotation(-7.5F, 0.0F, 0.0F), Easing.CUBIC))))
                 .track(translation(AnimationTargets.PUPIL_LEFT_TRANSLATION, List.of(
                         key(0, new Vec3(0.9D, 0.1D, 0.0D), Easing.CUBIC),
-                        key(20, new Vec3(0.1D, 0.1D, 0.0D), Easing.CUBIC),
-                        key(30, new Vec3(0.1D, 0.1D, 0.0D), Easing.CUBIC),
+                        key(20, new Vec3(0.0D, 0.1D, 0.0D), Easing.CUBIC),
+                        key(30, new Vec3(0.0D, 0.1D, 0.0D), Easing.CUBIC),
                         key(50, new Vec3(0.9D, 0.1D, 0.0D), Easing.CUBIC))))
                 .track(translation(AnimationTargets.PUPIL_RIGHT_TRANSLATION, List.of(
-                        key(0, new Vec3(-0.1D, 0.1D, 0.0D), Easing.CUBIC),
+                        key(0, new Vec3(0.0D, 0.1D, 0.0D), Easing.CUBIC),
                         key(20, new Vec3(-0.9D, 0.1D, 0.0D), Easing.CUBIC),
                         key(30, new Vec3(-0.9D, 0.1D, 0.0D), Easing.CUBIC),
-                        key(50, new Vec3(-0.1D, 0.1D, 0.0D), Easing.CUBIC))))
+                        key(50, new Vec3(0.0D, 0.1D, 0.0D), Easing.CUBIC))))
                 .track(scale(AnimationTargets.PUPIL_LEFT_SCALE, List.of(
                         key(0, new Vector3f(1.0F, 0.8F, 1.0F), Easing.CUBIC))))
                 .track(scale(AnimationTargets.PUPIL_RIGHT_SCALE, List.of(
                         key(0, new Vector3f(1.0F, 0.8F, 1.0F), Easing.CUBIC))))
-                .track(rotation(AnimationTargets.LEG_LEFT_ROTATION_OVERRIDE, List.of(
+                .track(rotation(AnimationTargets.LEG_LEFT_ROTATION, List.of(
                         key(0, rotation(0.0F, -7.5F, -1.0F), Easing.LINEAR))))
-                .track(rotation(AnimationTargets.LEG_RIGHT_ROTATION_OVERRIDE, List.of(
+                .track(rotation(AnimationTargets.LEG_RIGHT_ROTATION, List.of(
                         key(0, rotation(0.0F, 10.0F, 1.0F), Easing.LINEAR))))
                 .build();
     }

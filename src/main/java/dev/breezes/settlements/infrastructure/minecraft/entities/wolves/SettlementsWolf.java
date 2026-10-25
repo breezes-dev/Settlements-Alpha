@@ -256,7 +256,7 @@ public class SettlementsWolf extends Wolf implements ISettlementsBrainEntity, Pe
     }
 
     /**
-     * Swaps this Settlements wolf for a vanilla wolf tamed by the given player, carrying over only the coat
+     * Swaps this Settlements wolf for a vanilla wolf tamed by the given player, keeping its custom name and coat
      * variant. We replace the entity rather than tame in place because Settlements wolves are village-only;
      * a player's pet must be a plain vanilla wolf.
      */
@@ -265,19 +265,16 @@ public class SettlementsWolf extends Wolf implements ISettlementsBrainEntity, Pe
             return;
         }
 
-        Wolf vanillaWolf = EntityType.WOLF.create(serverLevel);
+        // The conversion carries the custom name but not the coat variant
+        Wolf vanillaWolf = this.convertTo(EntityType.WOLF, true);
         if (vanillaWolf == null) {
             return;
         }
 
-        vanillaWolf.moveTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), this.getXRot());
         vanillaWolf.setVariant(this.getVariant());
         vanillaWolf.tame(player);
         vanillaWolf.setOrderedToSit(true);
-
-        serverLevel.addFreshEntity(vanillaWolf);
         serverLevel.broadcastEntityEvent(vanillaWolf, (byte) 7); // hearts: taming succeeded
-        this.discard();
     }
 
     private void spawnPoof() {

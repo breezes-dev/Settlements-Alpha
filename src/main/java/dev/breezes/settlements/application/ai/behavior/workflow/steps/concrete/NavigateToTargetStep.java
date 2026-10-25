@@ -51,13 +51,16 @@ public class NavigateToTargetStep<T extends ISettlementsBrainEntity> extends Abs
         this(navigationType, completionDistance, null, null);
     }
 
+    /**
+     * Builds the step, walking when no navigation type is given.
+     */
     @Builder
-    public NavigateToTargetStep(@Nonnull NavigationType navigationType,
+    public NavigateToTargetStep(@Nullable NavigationType navigationType,
                                 int completionDistance,
                                 @Nullable StageKey unreachableTransition,
                                 @Nullable Boolean reachabilityGated) {
         super("NavigateToTargetStep", DEFAULT_NAV_TIMEOUT_TICKS, unreachableTransition);
-        this.navigationType = navigationType;
+        this.navigationType = navigationType == null ? NavigationType.WALK : navigationType;
         this.completionDistance = completionDistance;
         this.unreachableTransition = unreachableTransition;
         // Gating is enabled by default

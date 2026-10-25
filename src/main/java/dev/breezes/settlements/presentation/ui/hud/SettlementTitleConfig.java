@@ -12,10 +12,8 @@ public record SettlementTitleConfig(
         @BooleanConfig(
                 type = ConfigurationType.FEATURE,
                 identifier = "enabled",
-                description = "Whether this client shows settlement titles and plays their sounds: discovering, " +
-                        "entering, and leaving a settlement, founding or renaming one, and one falling into ruin " +
-                        "around the player. Each player's own file decides; a dedicated server ignores this setting.",
-                defaultValue = true)
+                description = "Whether this client shows titles and effects when discovering, entering, and leaving settlements.",
+                defaultValue = false)
         boolean enabled
 ) {
 

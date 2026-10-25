@@ -16,6 +16,7 @@ import dev.breezes.settlements.application.ai.behavior.workflow.steps.StepResult
 import dev.breezes.settlements.application.ai.behavior.workflow.steps.TimeBasedStep;
 import dev.breezes.settlements.application.ai.behavior.workflow.steps.concrete.NavigateToTargetStep;
 import dev.breezes.settlements.application.ai.behavior.workflow.steps.concrete.StayCloseStep;
+import dev.breezes.settlements.bootstrap.registry.entities.EntityRegistry;
 import dev.breezes.settlements.domain.ai.conditions.ICondition;
 import dev.breezes.settlements.domain.ai.conditions.PerceivedEntityExistsCondition;
 import dev.breezes.settlements.domain.ai.memory.MemoryTypeRegistry;
@@ -165,17 +166,15 @@ public class TameWolfBehavior extends VillagerStateMachineBehavior {
                             settlementsWolf = alreadySettlementsWolf;
                             log.debug("Tamed existing SettlementsWolf {} in-place", settlementsWolf.getUUID());
                         } else {
-                            // Vanilla Wolf: swap for a SettlementsWolf and copy the coat variant so the
-                            // visual appearance is preserved across the entity replacement.
+                            // Vanilla Wolf: convert to a SettlementsWolf so it keeps its custom name, and copy the
+                            // coat variant, which the conversion does not carry
                             Holder<WolfVariant> variant = wolf.getVariant();
-                            boolean wasBaby = wolf.isBaby();
-                            wolf.discard();
-
-                            settlementsWolf = SettlementsWolf.spawn(wolfLoc);
-                            settlementsWolf.setVariant(variant);
-                            if (wasBaby) {
-                                settlementsWolf.setBaby(true);
+                            settlementsWolf = wolf.convertTo(EntityRegistry.SETTLEMENTS_WOLF.get(), true);
+                            if (settlementsWolf == null) {
+                                log.error("Failed to convert tamed vanilla wolf {} into a SettlementsWolf", wolf.getUUID());
+                                return StepResult.complete();
                             }
+                            settlementsWolf.setVariant(variant);
                             settlementsWolf.setTame(true, true);
                             settlementsWolf.setOwnerUUID(ctx.getInitiator().getMinecraftEntity().getUUID());
                             settlementsWolf.applyCollarColor(DyeColor.LIME);

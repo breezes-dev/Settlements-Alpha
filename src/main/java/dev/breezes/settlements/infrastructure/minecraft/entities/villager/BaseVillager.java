@@ -173,7 +173,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     private static final SyncedDataWrapper<Byte> DATA_LOCOMOTION_NAVIGATION_TYPE = SyncedDataWrapper.<Byte>builder()
             .entityClass(BaseVillager.class)
             .serializer(EntityDataSerializers.BYTE)
-            .defaultValue(NavigationType.STROLL.toNetworkByte())
+            .defaultValue(NavigationType.WALK.toNetworkByte())
             .build();
     private static final SyncedDataWrapper<Boolean> DATA_BOBBER_DEPLOYED = SyncedDataWrapper.<Boolean>builder()
             .entityClass(BaseVillager.class)
@@ -192,7 +192,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             .build();
 
     private final IVillagerBrain settlementsBrain;
-    private final INavigationManager<BaseVillager> navigationManager;
+    private final VanillaMemoryNavigationManager<BaseVillager> navigationManager;
     private final PlanRuntimeState planRuntimeState;
     private final OverrideRuntimeState overrideRuntimeState;
     private boolean brainGoalsInitialized;
@@ -338,8 +338,9 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         return DATA_MOTION_GENERATION.get(this.entityData);
     }
 
-    public void setLocomotionNavigationType(@Nonnull NavigationType navigationType) {
-        DATA_LOCOMOTION_NAVIGATION_TYPE.set(this.entityData, navigationType.toNetworkByte());
+    @Override
+    public INavigationManager<BaseVillager> getNavigationManager() {
+        return this.navigationManager;
     }
 
     public NavigationType getLocomotionNavigationType() {
@@ -702,6 +703,10 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         this.tickNameSync();
         this.tickMembershipCheck(server);
         this.tickCheckIn(server);
+
+        // Publish after every walk-target writer has run this tick
+        NavigationType navigationIntent = this.navigationManager.resolveActiveNavigationIntent();
+        DATA_LOCOMOTION_NAVIGATION_TYPE.set(this.entityData, navigationIntent.toNetworkByte());
     }
 
     /**

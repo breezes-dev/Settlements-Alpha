@@ -84,13 +84,11 @@ public class ButcherLivestockBehavior extends VillagerStateMachineBehavior {
         this.animalDataManager = animalDataManager;
         this.requireVillageOwnedTag = config.requireVillageOwnedTag();
 
-        // Loose precondition: at least one entity of a datapack-registered butcherable type exists
-        // and is an adult. The strict minimum-keep population check happens inside onBehaviorStart.
+        // Loose precondition: at least one butcher candidate is perceived. The strict minimum-keep
+        // population check happens inside onBehaviorStart.
         this.preconditions.add(PerceivedEntityExistsCondition.<BaseVillager, LivingEntity>builder()
                 .entityType(LivingEntity.class)
-                .filter((villager, entity) -> this.animalDataManager.findByEntityType(entity.getType()).isPresent()
-                        && isAdultOrNonAgeable(entity)
-                        && (!this.requireVillageOwnedTag || entity.getTags().contains(EntityTag.VILLAGE_OWNED_ANIMAL.getTag())))
+                .filter((villager, entity) -> this.isButcherCandidate(entity))
                 .completionRange(1)
                 .build());
         this.preconditions.add(support.getDemandSignalService().requireItem(new ItemMatch.ItemRef(IRON_AXE_ID), 1, 50, this.getClass().getSimpleName()));
@@ -214,7 +212,8 @@ public class ButcherLivestockBehavior extends VillagerStateMachineBehavior {
                                    @Nonnull Level world,
                                    @Nonnull BaseVillager entity,
                                    @Nonnull BehaviorContext<BaseVillager> context) {
-        return this.target != null && this.selectedAnimalType != null;
+        // Naming the target after selection spares it, even mid-approach or mid-swing
+        return this.target != null && this.selectedAnimalType != null && !this.target.hasCustomName();
     }
 
     @Override
@@ -300,6 +299,10 @@ public class ButcherLivestockBehavior extends VillagerStateMachineBehavior {
             return false;
         }
         if (!isAdultOrNonAgeable(entity)) {
+            return false;
+        }
+        // A named animal belongs to whoever named it, so it is neither butchered nor counted toward the minimum keep
+        if (entity.hasCustomName()) {
             return false;
         }
         if (this.requireVillageOwnedTag && !entity.getTags().contains(EntityTag.VILLAGE_OWNED_ANIMAL.getTag())) {

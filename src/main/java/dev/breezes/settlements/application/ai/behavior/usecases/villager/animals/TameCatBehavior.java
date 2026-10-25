@@ -15,6 +15,7 @@ import dev.breezes.settlements.application.ai.behavior.workflow.steps.StepResult
 import dev.breezes.settlements.application.ai.behavior.workflow.steps.TimeBasedStep;
 import dev.breezes.settlements.application.ai.behavior.workflow.steps.concrete.NavigateToTargetStep;
 import dev.breezes.settlements.application.ai.behavior.workflow.steps.concrete.StayCloseStep;
+import dev.breezes.settlements.bootstrap.registry.entities.EntityRegistry;
 import dev.breezes.settlements.domain.ai.conditions.ICondition;
 import dev.breezes.settlements.domain.ai.conditions.PerceivedEntityExistsCondition;
 import dev.breezes.settlements.domain.ai.memory.MemoryTypeRegistry;
@@ -141,17 +142,15 @@ public class TameCatBehavior extends VillagerStateMachineBehavior {
                         catLoc.displayParticles(ParticleTypes.HEART, 7, 0.4, 0.5, 0.4, 0.01);
                         catLoc.playSound(SoundEvents.CAT_EAT, 0.8f, 1.0f, SoundSource.NEUTRAL);
 
-                        // Preserve the cat's coat variant before discarding so the SettlementsCat
-                        // entity doesn't silently reroll to a different skin on tame.
+                        // Convert to a SettlementsCat so it keeps its custom name, and copy the coat variant,
+                        // which the conversion does not carry
                         Holder<CatVariant> variant = cat.getVariant();
-                        boolean wasBaby = cat.isBaby();
-                        cat.discard();
-
-                        SettlementsCat settlementsCat = SettlementsCat.spawn(catLoc);
-                        settlementsCat.setVariant(variant);
-                        if (wasBaby) {
-                            settlementsCat.setBaby(true);
+                        SettlementsCat settlementsCat = cat.convertTo(EntityRegistry.SETTLEMENTS_CAT.get(), true);
+                        if (settlementsCat == null) {
+                            log.error("Failed to convert tamed cat {} into a SettlementsCat", cat.getUUID());
+                            return StepResult.complete();
                         }
+                        settlementsCat.setVariant(variant);
                         settlementsCat.setTame(true, true);
                         settlementsCat.setOwnerUUID(ctx.getInitiator().getMinecraftEntity().getUUID());
                         settlementsCat.applyCollarColor(DyeColor.LIME);

@@ -13,6 +13,8 @@ import dev.breezes.settlements.infrastructure.network.features.farming.handler.C
 import dev.breezes.settlements.infrastructure.network.features.farming.packet.ClientBoundCultivationSeedSetPacket;
 import dev.breezes.settlements.infrastructure.network.features.flare.handler.ClientBoundFlarePacketHandler;
 import dev.breezes.settlements.infrastructure.network.features.flare.packet.ClientBoundFlarePacket;
+import dev.breezes.settlements.infrastructure.network.features.raid.handler.ClientBoundRaidWaveBeamPacketHandler;
+import dev.breezes.settlements.infrastructure.network.features.raid.packet.ClientBoundRaidWaveBeamPacket;
 import dev.breezes.settlements.infrastructure.network.features.schedule.handler.ClientBoundVillageDayTypePacketHandler;
 import dev.breezes.settlements.infrastructure.network.features.schedule.packet.ClientBoundVillageDayTypePacket;
 import dev.breezes.settlements.infrastructure.network.features.ui.bubble.handler.ClientBoundBubbleSnapshotPacketHandler;
@@ -101,6 +103,11 @@ public abstract class ClientNetworkModule {
     @IntoMap
     @ClassKey(ClientBoundFlarePacket.class)
     abstract ClientSidePacketHandler<?> flare(ClientBoundFlarePacketHandler impl);
+
+    @Binds
+    @IntoMap
+    @ClassKey(ClientBoundRaidWaveBeamPacket.class)
+    abstract ClientSidePacketHandler<?> raidWaveBeam(ClientBoundRaidWaveBeamPacketHandler impl);
 
     @Binds
     @IntoMap

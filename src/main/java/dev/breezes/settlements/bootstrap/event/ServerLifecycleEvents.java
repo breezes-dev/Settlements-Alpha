@@ -41,6 +41,7 @@ public final class ServerLifecycleEvents {
         NeoForge.EVENT_BUS.register(serverComponent.settlementClaimSyncServerEvents());
         NeoForge.EVENT_BUS.register(serverComponent.settlementDirectorySyncServerEvents());
         NeoForge.EVENT_BUS.register(serverComponent.tradeSessionReaperServerEvents());
+        NeoForge.EVENT_BUS.register(serverComponent.raidWaveMarkServerEvents());
         NeoForge.EVENT_BUS.register(serverComponent.villagerConversionServerEvents());
         NeoForge.EVENT_BUS.register(serverComponent.villageAnimalSpawnerServerEvents());
         NeoForge.EVENT_BUS.register(serverComponent.worldgenVillagerReplacementServerEvents());
@@ -88,6 +89,7 @@ public final class ServerLifecycleEvents {
             NeoForge.EVENT_BUS.unregister(serverComponent.settlementClaimSyncServerEvents());
             NeoForge.EVENT_BUS.unregister(serverComponent.settlementDirectorySyncServerEvents());
             NeoForge.EVENT_BUS.unregister(serverComponent.tradeSessionReaperServerEvents());
+            NeoForge.EVENT_BUS.unregister(serverComponent.raidWaveMarkServerEvents());
             NeoForge.EVENT_BUS.unregister(serverComponent.villagerConversionServerEvents());
             NeoForge.EVENT_BUS.unregister(serverComponent.villageAnimalSpawnerServerEvents());
             NeoForge.EVENT_BUS.unregister(serverComponent.worldgenVillagerReplacementServerEvents());

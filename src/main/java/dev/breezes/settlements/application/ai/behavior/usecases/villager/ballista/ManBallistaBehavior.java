@@ -18,9 +18,9 @@ import dev.breezes.settlements.domain.animation.AnimationArchetype;
 import dev.breezes.settlements.domain.animation.BallistaAnimations;
 import dev.breezes.settlements.domain.ballista.BallistaFiringSolution;
 import dev.breezes.settlements.domain.ballista.BallistaLaunchPoint;
-import dev.breezes.settlements.domain.ballista.BallistaLease;
 import dev.breezes.settlements.domain.ballista.BallistaOperatorSkill;
 import dev.breezes.settlements.domain.ballista.BallistaStateMachine;
+import dev.breezes.settlements.domain.concurrency.RenewableLease;
 import dev.breezes.settlements.domain.inventory.VillagerInventory;
 import dev.breezes.settlements.domain.time.ClockTicks;
 import dev.breezes.settlements.domain.time.ITickable;
@@ -146,7 +146,7 @@ public class ManBallistaBehavior extends VillagerStateMachineBehavior {
         this.config = config;
         this.shotChecks = shotChecks;
         this.target = target;
-        this.leaseRenewal = Tickable.staggered(BallistaLease.RENEWAL_INTERVAL);
+        this.leaseRenewal = Tickable.staggered(RenewableLease.RENEWAL_INTERVAL);
         this.sightCheck = Tickable.staggered(SIGHT_CHECK_INTERVAL);
 
         this.preconditions.add(ICondition.named("a ballista the villager can take up", this::chooseMachine));

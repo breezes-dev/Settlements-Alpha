@@ -408,13 +408,18 @@ lasts. The runner, its actions and the combat options are in [`threat_response.m
 
 A raid duty is a `DUTY` policy narrowed to the raid activity it serves, with one policy per duty.
 `isAdmissibleDuring` sees the activity but not the villager, so a single policy dispatching every profession's duty
-could not keep a pre-raid duty out of the wave. `ChartRaidersOverridePolicy` is one, and `OverridePolicyModule` holds
-the set.
+could not keep a pre-raid duty out of the wave. Charting serves a live wave, while next-wave marking serves the
+pre-wave window. `OverridePolicyModule` owns duty membership and ordering.
 
-A duty decides whether a wave is on with `ActivityArbiter.isRaidWaveLive`, the predicate behind `RAID_HIDE`, but it reads
-the raid at a different moment. The arbiter re-derives the activity on its own cadence, while a duty reads the raid
-when it evaluates and again when it acts. Around a wave's start and end the two can differ for a moment, so a duty
-re-checks the raid when it acts rather than trusting that its admitting activity still holds.
+A duty checks its raid phase through `ActivityArbiter.isRaidWaveLive` or `ActivityArbiter.isRaidAwaitingWave`, the
+predicates behind the matching raid activities. The arbiter re-derives the activity on its own cadence, while a duty
+reads the raid when it evaluates and again when it acts. Around a wave's start and end the two can differ for a
+moment, so a duty re-checks the raid when it acts rather than trusting that its admitting activity still holds.
+
+Next-wave marking also reads `RaidWaveMarkRegistry`, the authority for the window's first-claim lease and committed
+mark. Evaluation never takes a claim, because requesting execution does not guarantee a start. A sighting that ends
+before commitment releases its claim; once committed, the mark belongs to the raid window and survives its
+cartographer's interruption or removal. This separates the duty's short presentation from the result's lifetime.
 
 A duty that stands still depends on the raid packages' gated movement as much as one that moves (see
 [Reactive and Baby Activities](#reactive-and-baby-activities)).

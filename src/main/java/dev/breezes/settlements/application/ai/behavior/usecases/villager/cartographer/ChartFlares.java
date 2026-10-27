@@ -1,5 +1,6 @@
 package dev.breezes.settlements.application.ai.behavior.usecases.villager.cartographer;
 
+import dev.breezes.settlements.application.ai.raid.RaidAudience;
 import dev.breezes.settlements.domain.entities.Expertise;
 import dev.breezes.settlements.infrastructure.network.features.flare.packet.ClientBoundFlarePacket;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -109,9 +110,7 @@ final class ChartFlares {
             return;
         }
 
-        // The players vanilla shows the raid's bar to
-        List<ServerPlayer> recipients =
-                level.getPlayers(player -> player.isAlive() && level.getRaidAt(player.blockPosition()) == raid);
+        List<ServerPlayer> recipients = RaidAudience.playersIn(level, raid);
         ClientBoundFlarePacket packet = new ClientBoundFlarePacket(HIDE_WITHIN, flares);
         for (ServerPlayer recipient : recipients) {
             PacketDistributor.sendToPlayer(recipient, packet);

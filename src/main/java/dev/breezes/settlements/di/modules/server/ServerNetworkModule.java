@@ -4,9 +4,11 @@ import dagger.Binds;
 import dagger.Module;
 import dagger.multibindings.ClassKey;
 import dagger.multibindings.IntoMap;
+import dev.breezes.settlements.application.ai.raid.RaidWaveMarkPublisher;
 import dev.breezes.settlements.infrastructure.network.core.ServerSidePacketHandler;
 import dev.breezes.settlements.infrastructure.network.features.ballista.handler.ServerBoundBallistaAimPacketHandler;
 import dev.breezes.settlements.infrastructure.network.features.ballista.packet.ServerBoundBallistaAimPacket;
+import dev.breezes.settlements.infrastructure.network.features.raid.RaidWaveMarkPacketSender;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.handler.ServerBoundCloseUiPacketHandler;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.handler.ServerBoundHeartbeatUiPacketHandler;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.handler.ServerBoundOpenUiPacketHandler;
@@ -16,6 +18,9 @@ import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.Se
 
 @Module
 public abstract class ServerNetworkModule {
+
+    @Binds
+    abstract RaidWaveMarkPublisher raidWaveMarkPublisher(RaidWaveMarkPacketSender impl);
 
     @Binds
     @IntoMap

@@ -85,6 +85,15 @@ public final class ActivityArbiter {
     }
 
     /**
+     * Whether the raid is awaiting its first wave or a subsequent wave.
+     *
+     * @param raid the raid at the villager's position, or null when there is none
+     */
+    public static boolean isRaidAwaitingWave(@Nullable Raid raid) {
+        return determineRaidActivity(raid) == Activity.PRE_RAID;
+    }
+
+    /**
      * Re-derives and asserts the villager's activity if needed.
      * Must be called once per server tick.
      *

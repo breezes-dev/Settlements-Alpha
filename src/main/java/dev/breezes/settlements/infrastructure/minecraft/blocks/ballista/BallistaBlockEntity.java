@@ -6,8 +6,8 @@ import dev.breezes.settlements.domain.animation.AnimationPose;
 import dev.breezes.settlements.domain.ballista.BallistaAim;
 import dev.breezes.settlements.domain.ballista.BallistaAnimator;
 import dev.breezes.settlements.domain.ballista.BallistaIntentPrediction;
-import dev.breezes.settlements.domain.ballista.BallistaLease;
 import dev.breezes.settlements.domain.ballista.BallistaStateMachine;
+import dev.breezes.settlements.domain.concurrency.RenewableLease;
 import dev.breezes.settlements.domain.tags.SettlementsEntityTypeTags;
 import dev.breezes.settlements.domain.time.ClockTicks;
 import dev.breezes.settlements.domain.world.location.Location;
@@ -113,7 +113,7 @@ public class BallistaBlockEntity extends BlockEntity {
      * the directives consult it. Neither saved nor sent to clients, so an unload frees the machine.
      */
     @ServerSide
-    private final BallistaLease lease;
+    private final RenewableLease lease;
 
     /**
      * The aim's angles as of the previous tick, which a frame interpolates from.
@@ -168,7 +168,7 @@ public class BallistaBlockEntity extends BlockEntity {
         this.ammunition = ItemStack.EMPTY;
         this.seaterId = null;
         this.sparesVillagerAllies = false;
-        this.lease = new BallistaLease();
+        this.lease = new RenewableLease();
         this.previousYaw = this.aim.getYaw();
         this.previousPitch = this.aim.getPitch();
         this.headingKnown = false;

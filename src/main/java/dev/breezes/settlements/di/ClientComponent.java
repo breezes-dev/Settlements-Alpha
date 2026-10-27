@@ -26,6 +26,8 @@ import dev.breezes.settlements.infrastructure.rendering.debug.tuning.DebugTuning
 import dev.breezes.settlements.infrastructure.rendering.debug.tuning.DebugTuningHudRenderer;
 import dev.breezes.settlements.infrastructure.rendering.flare.FlarePlayback;
 import dev.breezes.settlements.infrastructure.rendering.highlight.EntityHighlightRenderer;
+import dev.breezes.settlements.infrastructure.rendering.raid.RaidWaveBeamRenderer;
+import dev.breezes.settlements.infrastructure.rendering.raid.RaidWaveBeamStore;
 import dev.breezes.settlements.infrastructure.rendering.zone.CultivationLilyPlacementPreviewRenderer;
 import dev.breezes.settlements.infrastructure.rendering.zone.CultivationLilyZoneRevealRenderer;
 import dev.breezes.settlements.presentation.ui.hud.ClockHudRenderer;
@@ -92,6 +94,10 @@ public interface ClientComponent {
     BallistaAimGuideRenderer ballistaAimGuideRenderer();
 
     FlarePlayback flarePlayback();
+
+    RaidWaveBeamStore raidWaveBeamStore();
+
+    RaidWaveBeamRenderer raidWaveBeamRenderer();
 
     Set<ClientSessionResettable> clientSessionResettables();
 

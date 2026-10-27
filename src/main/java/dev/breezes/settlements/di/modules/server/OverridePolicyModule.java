@@ -6,6 +6,7 @@ import dev.breezes.settlements.application.ai.override.ChartRaidersOverridePolic
 import dev.breezes.settlements.application.ai.override.CollectDemandedItemOverridePolicy;
 import dev.breezes.settlements.application.ai.override.CombatOverridePolicy;
 import dev.breezes.settlements.application.ai.override.CourtshipAcceptOverridePolicy;
+import dev.breezes.settlements.application.ai.override.MarkRaidWaveOverridePolicy;
 import dev.breezes.settlements.application.ai.override.OverridePolicy;
 import dev.breezes.settlements.application.ai.override.RetrieveProjectilesOverridePolicy;
 import dev.breezes.settlements.application.ai.override.TradeAcceptOverridePolicy;
@@ -23,6 +24,7 @@ public abstract class OverridePolicyModule {
     @Provides
     static List<OverridePolicy> overridePolicies(CombatOverridePolicy combat,
                                                  ChartRaidersOverridePolicy chartRaiders,
+                                                 MarkRaidWaveOverridePolicy markRaidWave,
                                                  CourtshipAcceptOverridePolicy courtshipAccept,
                                                  TradeAcceptOverridePolicy tradeAccept,
                                                  CollectDemandedItemOverridePolicy collectDemandedItem,
@@ -31,6 +33,7 @@ public abstract class OverridePolicyModule {
         return List.of(
                 combat,
                 chartRaiders,
+                markRaidWave,
                 courtshipAccept,
                 tradeAccept,
                 collectDemandedItem,

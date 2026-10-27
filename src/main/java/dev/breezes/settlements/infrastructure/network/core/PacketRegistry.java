@@ -6,6 +6,7 @@ import dev.breezes.settlements.infrastructure.network.features.ballista.packet.S
 import dev.breezes.settlements.infrastructure.network.features.debug.packet.ClientBoundSettlementDebugPacket;
 import dev.breezes.settlements.infrastructure.network.features.farming.packet.ClientBoundCultivationSeedSetPacket;
 import dev.breezes.settlements.infrastructure.network.features.flare.packet.ClientBoundFlarePacket;
+import dev.breezes.settlements.infrastructure.network.features.raid.packet.ClientBoundRaidWaveBeamPacket;
 import dev.breezes.settlements.infrastructure.network.features.schedule.packet.ClientBoundVillageDayTypePacket;
 import dev.breezes.settlements.infrastructure.network.features.ui.bubble.packet.ClientBoundBubbleSnapshotPacket;
 import dev.breezes.settlements.infrastructure.network.features.ui.dayplan.packet.ClientBoundDayPlanSnapshotPacket;
@@ -33,7 +34,7 @@ public class PacketRegistry {
      * Wire-format version of all Settlements payloads and synced attachments.
      * Prevents clients from joining servers compiled with a different version.
      */
-    private static final String NETWORK_VERSION = "3";
+    private static final String NETWORK_VERSION = "4";
 
     public static void bindPacketHandlers(@Nonnull RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(NETWORK_VERSION).optional();
@@ -43,6 +44,7 @@ public class PacketRegistry {
         registerClient(registrar, ClientBoundCultivationSeedSetPacket.ID, ClientBoundCultivationSeedSetPacket.CODEC);
         registerClient(registrar, ClientBoundVillageDayTypePacket.ID, ClientBoundVillageDayTypePacket.CODEC);
         registerClient(registrar, ClientBoundFlarePacket.ID, ClientBoundFlarePacket.CODEC);
+        registerClient(registrar, ClientBoundRaidWaveBeamPacket.ID, ClientBoundRaidWaveBeamPacket.CODEC);
         registerClient(registrar, ClientBoundSettlementArrivalPacket.ID, ClientBoundSettlementArrivalPacket.CODEC);
 
         registerServer(registrar, ServerBoundBallistaAimPacket.ID, ServerBoundBallistaAimPacket.CODEC);

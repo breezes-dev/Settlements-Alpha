@@ -12,6 +12,7 @@ import dev.breezes.settlements.infrastructure.rendering.border.SettlementBorderR
 import dev.breezes.settlements.infrastructure.rendering.debug.SettlementDebugOverlayState;
 import dev.breezes.settlements.infrastructure.rendering.flare.FlarePlayback;
 import dev.breezes.settlements.infrastructure.rendering.highlight.TotemHighlightProvider;
+import dev.breezes.settlements.infrastructure.rendering.raid.RaidWaveBeamStore;
 import dev.breezes.settlements.infrastructure.rendering.zone.CultivationLilyZoneRevealRenderer;
 import dev.breezes.settlements.presentation.ui.hud.ClockHudRenderer;
 import dev.breezes.settlements.presentation.ui.hud.CrosshairHudRenderer;
@@ -68,6 +69,10 @@ public abstract class ClientLifecycleModule {
     @Binds
     @IntoSet
     abstract ClientSessionResettable flarePlayback(FlarePlayback implementation);
+
+    @Binds
+    @IntoSet
+    abstract ClientSessionResettable raidWaveBeamStore(RaidWaveBeamStore implementation);
 
     @Binds
     @IntoSet

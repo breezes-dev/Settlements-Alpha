@@ -73,6 +73,7 @@ public abstract class ClientAnimationModule {
                         Map.entry(AnimationKey.of(AnimationArchetype.REEL_IN, ItemCategory.FISHING_ROD), FishingAnimations.reelIn()),
                         Map.entry(AnimationKey.of(AnimationArchetype.INTERACT, ItemCategory.GENERIC), InteractAnimations.interact()),
                         Map.entry(AnimationKey.of(AnimationArchetype.SURVEY_WITH_SPYGLASS, ItemCategory.SPYGLASS), CartographerAnimations.surveyWithSpyglass()),
+                        Map.entry(AnimationKey.of(AnimationArchetype.SIGHT_WITH_SPYGLASS, ItemCategory.SPYGLASS), CartographerAnimations.sightWithSpyglass()),
                         Map.entry(AnimationKey.of(AnimationArchetype.WRITE_TO_MAP, ItemCategory.MAP), CartographerAnimations.markMap()),
                         Map.entry(AnimationKey.of(AnimationArchetype.EAT, ItemCategory.GENERIC), EatingAnimations.eat()),
                         Map.entry(AnimationKey.of(AnimationArchetype.WAVE, ItemCategory.GENERIC), WaveAnimations.wave()),

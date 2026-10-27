@@ -39,6 +39,7 @@ import dev.breezes.settlements.bootstrap.event.GossipSessionReaperServerEvents;
 import dev.breezes.settlements.bootstrap.event.PersonaSweepServerEvents;
 import dev.breezes.settlements.bootstrap.event.PlanOverlayPumpServerEvents;
 import dev.breezes.settlements.bootstrap.event.PlayerSettlementTracker;
+import dev.breezes.settlements.bootstrap.event.RaidWaveMarkServerEvents;
 import dev.breezes.settlements.bootstrap.event.RehearsedDialogueSweepServerEvents;
 import dev.breezes.settlements.bootstrap.event.ResourceIndexRefresherServerEvents;
 import dev.breezes.settlements.bootstrap.event.SettlementArrivalAnnouncer;
@@ -82,7 +83,6 @@ import dev.breezes.settlements.infrastructure.minecraft.data.fishing.FishCatchDa
 import dev.breezes.settlements.infrastructure.minecraft.data.mining.OreRegenDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.query.SettlementStructureLocator;
 import dev.breezes.settlements.infrastructure.network.core.ServerSidePacketReceiver;
-
 import jakarta.inject.Provider;
 
 import java.util.Set;
@@ -183,6 +183,8 @@ public interface ServerComponent {
     GossipSessionReaperServerEvents gossipSessionReaperServerEvents();
 
     TradeSessionReaperServerEvents tradeSessionReaperServerEvents();
+
+    RaidWaveMarkServerEvents raidWaveMarkServerEvents();
 
     DialogueProvider dialogueProvider();
 

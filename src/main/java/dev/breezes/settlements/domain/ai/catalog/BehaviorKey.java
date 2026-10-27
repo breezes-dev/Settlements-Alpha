@@ -78,6 +78,7 @@ public record BehaviorKey(String id) {
     // Surveying
     public static final BehaviorKey SURVEY_LANDSCAPE = new BehaviorKey("survey_landscape");
     public static final BehaviorKey CHART_RAIDERS = new BehaviorKey("chart_raiders");
+    public static final BehaviorKey MARK_RAID_WAVE = new BehaviorKey("mark_raid_wave");
 
     // Fishing
     public static final BehaviorKey FISHING = new BehaviorKey("fishing");

@@ -44,7 +44,7 @@ class WorldEventTypeTest {
             "ITEM_ENCHANTED", "LEATHER_DYED", "LEATHER_WASHED", "ANIMAL_BRED",
             "ANIMAL_TAMED", "WOLF_WASHED", "WOLF_FED", "DOG_WALKED",
             "GOLEM_REPAIRED", "POTION_THROWN", "BELL_RUNG", "TARGET_EGGED",
-            "CHICKENS_CHASED", "CHICKENS_REVENGED", "LANDSCAPE_SURVEYED", "RAIDERS_CHARTED",
+            "CHICKENS_CHASED", "CHICKENS_REVENGED", "LANDSCAPE_SURVEYED", "RAIDERS_CHARTED", "RAID_WAVE_MARKED",
             "CHEST_MANAGED", "ITEM_COLLECTED"
     })
     void alignedConstants_forceRememberAndSeedWorthyAreEqual(WorldEventType type) {

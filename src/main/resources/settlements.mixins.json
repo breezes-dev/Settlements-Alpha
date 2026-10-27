@@ -13,7 +13,8 @@
     "VillagerMixin",
     "LevelMixin",
     "EntityMixin",
-    "AbstractArrowInvoker"
+    "AbstractArrowInvoker",
+    "RaidMixin"
   ],
   "client": [
   ],

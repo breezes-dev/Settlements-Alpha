@@ -27,6 +27,8 @@ import dev.breezes.settlements.application.ai.behavior.usecases.villager.animals
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.animals.washing.WashWolfConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.cartographer.ChartRaidersBehavior;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.cartographer.ChartRaidersConfig;
+import dev.breezes.settlements.application.ai.behavior.usecases.villager.cartographer.MarkRaidWaveBehavior;
+import dev.breezes.settlements.application.ai.behavior.usecases.villager.cartographer.MarkRaidWaveConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.cartographer.SurveyLandscapeBehavior;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.cartographer.SurveyLandscapeConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.cooking.smokemeat.SmokeMeatBehavior;
@@ -107,6 +109,7 @@ import dev.breezes.settlements.application.ai.courtship.BedReservationService;
 import dev.breezes.settlements.application.ai.courtship.CourtshipChoreographyLibrary;
 import dev.breezes.settlements.application.ai.courtship.CourtshipSelfMemoryRecorder;
 import dev.breezes.settlements.application.ai.courtship.CourtshipSessionRegistry;
+import dev.breezes.settlements.application.ai.raid.RaidWaveMarkRegistry;
 import dev.breezes.settlements.application.ai.trading.NegotiationEngine;
 import dev.breezes.settlements.application.ai.trading.TradeExecutor;
 import dev.breezes.settlements.application.ai.trading.TradeSessionRegistry;
@@ -1129,6 +1132,33 @@ public final class BehaviorCatalogModule {
                         .iconItemId(ResourceLocation.withDefaultNamespace("compass"))
                         .build())
                 .factory(() -> new ChartRaidersBehavior(config, support))
+                .build();
+    }
+
+    @Provides
+    @IntoSet
+    static BehaviorCatalogEntry markRaidWave(MarkRaidWaveConfig config,
+                                             RaidWaveMarkRegistry marks,
+                                             BehaviorSupport support) {
+        ClockTicks sighting = CartographerAnimations.SIGHT_DURATION;
+        return BehaviorCatalogEntry.builder()
+                .descriptor(BehaviorPlanningMetadata.builder()
+                        .key(BehaviorKey.MARK_RAID_WAVE)
+                        .displayName("Mark Raid Wave")
+                        .description("Sight the next raid wave's selected spawn point through a spyglass")
+                        .category(BehaviorCategory.WORK)
+                        .intensity(WorkIntensity.LIGHT)
+                        .requiredChannel(BehaviorChannel.MOVEMENT)
+                        .requiredChannel(BehaviorChannel.INTERACTION)
+                        .estimatedDuration(sighting.asGameTicks())
+                        .maxRunDuration(ClockTicks.of(sighting.getTicks() * 2))
+                        .interruptible(true)
+                        .build())
+                .displayInfo(BehaviorDisplayMetadata.builder()
+                        .displayNameKey(BehaviorKey.MARK_RAID_WAVE.displayNameKey())
+                        .iconItemId(ResourceLocation.withDefaultNamespace("spyglass"))
+                        .build())
+                .factory(() -> new MarkRaidWaveBehavior(config, marks, support))
                 .build();
     }
 

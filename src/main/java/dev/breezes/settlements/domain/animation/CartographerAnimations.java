@@ -1,19 +1,32 @@
 package dev.breezes.settlements.domain.animation;
 
+import dev.breezes.settlements.domain.time.ClockTicks;
 import dev.breezes.settlements.shared.util.ResourceLocationUtil;
 import dev.breezes.settlements.shared.util.RotationUtil;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CartographerAnimations {
 
     public static final int MARK_DURATION_TICKS = 40;
+
+    /**
+     * The full raise, sight, and lower motion.
+     */
+    public static final ClockTicks SIGHT_DURATION = ClockTicks.seconds(3);
+
+    /**
+     * The instant the spyglass reaches the cartographer's eye.
+     */
+    public static final ClockTicks SIGHT_RAISE_TIME = ClockTicks.seconds(1);
+
+    private static final ClockTicks SIGHT_LOWER_TIME = ClockTicks.seconds(2.4);
 
     private static final int BLEND_IN_TICKS = 4;
     private static final int BLEND_OUT_TICKS = 4;
@@ -57,6 +70,39 @@ public final class CartographerAnimations {
                         key(SURVEY_RIGHT_TICK, rotation(-10.0F, 25.0F, 0.0F), Easing.EASE_IN_OUT),
                         key(SURVEY_CENTER_TICK, rotation(-10.0F, 0.0F, 0.0F), Easing.EASE_IN),
                         key(SURVEY_DURATION_TICKS, rotation(0.0F, 0.0F, 0.0F), Easing.LINEAR))))
+                .build();
+    }
+
+    /**
+     * A stationary spyglass sighting facing straight ahead.
+     */
+    public static KeyframeAnimation sightWithSpyglass() {
+        int raised = SIGHT_RAISE_TIME.getTicksAsInt();
+        int lowering = SIGHT_LOWER_TIME.getTicksAsInt();
+        int duration = SIGHT_DURATION.getTicksAsInt();
+        Vec3 raisedArms = new Vec3(0.0D, -2.2D, -0.3D);
+        return KeyframeAnimation.fromTracks()
+                .id(ResourceLocationUtil.mod("animation/cartographer/sight_with_spyglass"))
+                .durationTicks(duration)
+                .loopMode(LoopMode.ONCE)
+                .blendInTicks(BLEND_IN_TICKS)
+                .blendOutTicks(BLEND_OUT_TICKS)
+                .owns(VillagerAnimationRig.HEAD_ROTATION)
+                .track(rotation(AnimationTargets.ARMS_CROSSED_ROTATION, List.of(
+                        key(0, rotation(0.0F, 0.0F, 0.0F), Easing.EASE_OUT),
+                        key(raised, rotation(-60.0F, 0.0F, 0.0F), Easing.LINEAR),
+                        key(lowering, rotation(-60.0F, 0.0F, 0.0F), Easing.EASE_IN),
+                        key(duration, rotation(0.0F, 0.0F, 0.0F), Easing.LINEAR))))
+                .track(translation(AnimationTargets.ARMS_CROSSED_TRANSLATION, List.of(
+                        key(0, Vec3.ZERO, Easing.EASE_OUT),
+                        key(raised, raisedArms, Easing.LINEAR),
+                        key(lowering, raisedArms, Easing.EASE_IN),
+                        key(duration, Vec3.ZERO, Easing.LINEAR))))
+                .track(rotation(AnimationTargets.HEAD_ROTATION, List.of(
+                        key(0, rotation(0.0F, 0.0F, 0.0F), Easing.EASE_OUT),
+                        key(raised, rotation(-10.0F, 0.0F, 0.0F), Easing.LINEAR),
+                        key(lowering, rotation(-10.0F, 0.0F, 0.0F), Easing.EASE_IN),
+                        key(duration, rotation(0.0F, 0.0F, 0.0F), Easing.LINEAR))))
                 .build();
     }
 

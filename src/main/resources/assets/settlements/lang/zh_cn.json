@@ -80,6 +80,8 @@
   "block.settlements.cultivation_lily": "耕作睡莲",
   "block.settlements.ballista": "弩炮",
 
+  "effect.settlements.bound": "束缚",
+
   "creative_tab.settlements": "万家烟火",
 
   "ui.settlements.behavior.behavior.harvest_sugarcane": "收甘蔗",
@@ -131,6 +133,7 @@
   "ui.settlements.behavior.behavior.survey_landscape": "探查地形",
   "ui.settlements.behavior.behavior.chart_raiders": "标记袭击者",
   "ui.settlements.behavior.behavior.mark_raid_wave": "标记袭击地点",
+  "ui.settlements.behavior.behavior.bind_vexes": "禁锢恼鬼",
   "ui.settlements.behavior.behavior.courtship_initiate": "主动示爱",
   "ui.settlements.behavior.behavior.courtship_accept": "接受示爱",
   "ui.settlements.behavior.behavior.donate_emeralds": "捐赠绿宝石",

@@ -91,6 +91,10 @@ public final class MemoryModuleTypeRegistry {
             "chart_raiders_cooldown",
             () -> new MemoryModuleType<>(Optional.empty()));
 
+    public static final Supplier<MemoryModuleType<Boolean>> BIND_VEXES_COOLDOWN = REGISTRY.register(
+            "bind_vexes_cooldown",
+            () -> new MemoryModuleType<>(Optional.empty()));
+
     public static final Supplier<MemoryModuleType<Set<GlobalPos>>> REFUSED_BALLISTAS = REGISTRY.register(
             "refused_ballistas",
             () -> new MemoryModuleType<>(Optional.empty()));

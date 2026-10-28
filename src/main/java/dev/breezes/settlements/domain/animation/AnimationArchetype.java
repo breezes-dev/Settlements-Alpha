@@ -24,6 +24,7 @@ public enum AnimationArchetype {
     FORGE,
     READ_BOOK,
     SIGHT_WITH_SPYGLASS,
+    BIND_VEXES,
     ;
 
     private static final AnimationArchetype[] VALUES = values();

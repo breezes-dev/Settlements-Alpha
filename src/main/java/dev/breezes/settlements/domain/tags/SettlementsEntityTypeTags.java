@@ -40,6 +40,13 @@ public final class SettlementsEntityTypeTags {
             ResourceLocationUtil.mod("retrievable_projectiles"));
 
     /**
+     * Entities a librarian binds during a raid wave. An entity missing from VILLAGER_ENEMIES is never a target, even
+     * when it is in this tag.
+     */
+    public static final TagKey<EntityType<?>> BINDABLE = TagKey.create(Registries.ENTITY_TYPE,
+            ResourceLocationUtil.mod("bindable"));
+
+    /**
      * Entities counted as a settlement's residents when a founding observes how large it is.
      */
     public static final TagKey<EntityType<?>> SETTLEMENT_RESIDENTS = TagKey.create(Registries.ENTITY_TYPE,

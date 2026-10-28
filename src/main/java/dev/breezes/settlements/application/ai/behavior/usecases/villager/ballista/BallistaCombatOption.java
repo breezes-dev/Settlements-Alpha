@@ -9,8 +9,6 @@ import dev.breezes.settlements.domain.ai.behavior.contracts.IBehavior;
 import dev.breezes.settlements.domain.ai.catalog.BehaviorDisplayMetadata;
 import dev.breezes.settlements.domain.ai.memory.MemoryTypeRegistry;
 import dev.breezes.settlements.domain.entities.VillagerProfessionKey;
-import dev.breezes.settlements.domain.genetics.Gene;
-import dev.breezes.settlements.domain.genetics.GeneType;
 import dev.breezes.settlements.domain.time.ClockTicks;
 import dev.breezes.settlements.infrastructure.minecraft.blocks.ballista.BallistaBlockEntity;
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.BaseVillager;
@@ -33,7 +31,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Combat option for villagers operating a ballista.
+ * Combat option for fletchers operating a ballista.
  */
 @ServerScope
 @AllArgsConstructor(access = AccessLevel.PACKAGE, onConstructor_ = @Inject)
@@ -48,7 +46,6 @@ public final class BallistaCombatOption implements CombatOption {
     private static final double ENGAGEMENT_RANGE_BLOCKS = 48.0;
 
     private static final double RAID_ENGAGEMENT_WIDENING_BLOCKS = 8.0;
-    private static final double RAID_INTELLIGENCE_RELIEF = 0.2;
 
     /**
      * Maximum target distance from the ballista for an existing engagement.
@@ -87,12 +84,13 @@ public final class BallistaCombatOption implements CombatOption {
     }
 
     /**
-     * Null when the villager is not an eligible operator or knows no ballista it can use.
+     * Null when the villager is not a fletcher or knows no ballista it can use.
      */
     @Override
     @Nullable
     public Readiness prepare(@Nonnull BaseVillager villager) {
-        if (!(villager.level() instanceof ServerLevel level) || !this.isEligible(level, villager)) {
+        if (!VillagerProfessionKey.FLETCHER.equals(villager.getProfession())
+                || !(villager.level() instanceof ServerLevel level)) {
             return null;
         }
 
@@ -153,23 +151,6 @@ public final class BallistaCombatOption implements CombatOption {
      */
     static Vec3 floorCenterOf(@Nonnull BlockPos machinePos) {
         return new Vec3(machinePos.getX() + 0.5, machinePos.getY(), machinePos.getZ() + 0.5);
-    }
-
-    private boolean isEligible(@Nonnull ServerLevel level, @Nonnull BaseVillager villager) {
-        if (VillagerProfessionKey.FLETCHER.equals(villager.getProfession())) {
-            return true;
-        }
-
-        double intelligence = villager.getGenetics().getGeneValue(GeneType.INTELLIGENCE);
-        double threshold = this.config.operatorIntelligenceThreshold();
-        if (intelligence >= threshold) {
-            return true;
-        }
-        // Values above the gene maximum disable intelligence-based eligibility, even during raids.
-        // The raid lookup runs last, so only villagers within the relief margin pay for it.
-        return threshold <= Gene.MAXIMUM_VALUE
-                && intelligence >= threshold - RAID_INTELLIGENCE_RELIEF
-                && isRaidActive(level, villager);
     }
 
     private static double engagementRangeBlocks(boolean duringRaid) {

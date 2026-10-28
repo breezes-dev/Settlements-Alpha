@@ -79,6 +79,8 @@ import dev.breezes.settlements.application.ai.behavior.usecases.villager.leather
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.leatherworking.dyeleather.DyeLeatherConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.leatherworking.washleather.WashLeatherBehavior;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.leatherworking.washleather.WashLeatherConfig;
+import dev.breezes.settlements.application.ai.behavior.usecases.villager.librarian.BindVexesBehavior;
+import dev.breezes.settlements.application.ai.behavior.usecases.villager.librarian.BindVexesConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.logistics.CollectDemandedItemBehavior;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.logistics.CollectDemandedItemConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.logistics.ManageChestsBehavior;
@@ -128,6 +130,7 @@ import dev.breezes.settlements.domain.ai.catalog.CooldownRange;
 import dev.breezes.settlements.domain.ai.catalog.WorkIntensity;
 import dev.breezes.settlements.domain.ai.memory.MemoryTypeRegistry;
 import dev.breezes.settlements.domain.ai.planning.OpportunityRequirement;
+import dev.breezes.settlements.domain.animation.BindVexesAnimations;
 import dev.breezes.settlements.domain.animation.CartographerAnimations;
 import dev.breezes.settlements.domain.crafting.catalog.CraftCatalogRegistry;
 import dev.breezes.settlements.domain.economy.catalog.TradeCatalogRegistry;
@@ -1354,6 +1357,31 @@ public final class BehaviorCatalogModule {
                         .iconItemId(ResourceLocation.withDefaultNamespace("enchanting_table"))
                         .build())
                 .factory(() -> new EnchantItemBehavior(config, support, enchantmentEngine))
+                .build();
+    }
+
+    @Provides
+    @IntoSet
+    static BehaviorCatalogEntry bindVexes(BindVexesConfig config, BehaviorSupport support) {
+        ClockTicks channel = BindVexesAnimations.CHANNEL_DURATION;
+        return BehaviorCatalogEntry.builder()
+                .descriptor(BehaviorPlanningMetadata.builder()
+                        .key(BehaviorKey.BIND_VEXES)
+                        .displayName("Bind Vexes")
+                        .description("Channel a spell that holds and weakens nearby vexes")
+                        .category(BehaviorCategory.WORK)
+                        .intensity(WorkIntensity.LIGHT)
+                        .requiredChannel(BehaviorChannel.MOVEMENT)
+                        .requiredChannel(BehaviorChannel.INTERACTION)
+                        .estimatedDuration(channel.asGameTicks())
+                        .maxRunDuration(ClockTicks.of(channel.getTicks() * 2))
+                        .interruptible(true)
+                        .build())
+                .displayInfo(BehaviorDisplayMetadata.builder()
+                        .displayNameKey(BehaviorKey.BIND_VEXES.displayNameKey())
+                        .iconItemId(ResourceLocation.withDefaultNamespace("enchanted_book"))
+                        .build())
+                .factory(() -> new BindVexesBehavior(config, support))
                 .build();
     }
 

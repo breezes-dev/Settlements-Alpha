@@ -176,6 +176,13 @@ public final class MemoryTypeRegistry {
             "chart_raiders_cooldown", MemoryModuleTypeRegistry.CHART_RAIDERS_COOLDOWN);
 
     /**
+     * Present while a librarian waits before its next cast to bind vexes. Not saved with the brain, so a reload ends
+     * the wait.
+     */
+    public static final MemoryType.VanillaMemoryType<Boolean> BIND_VEXES_COOLDOWN = MemoryType.vanillaBacked(
+            "bind_vexes_cooldown", MemoryModuleTypeRegistry.BIND_VEXES_COOLDOWN);
+
+    /**
      * All decaying spatial memories, in declaration order. Used by diagnostics (e.g. the
      * {@code /stest memory} dump) and any future bulk operation over the decaying store.
      */

@@ -11,6 +11,7 @@ import dev.breezes.settlements.domain.animation.AnimationArchetype;
 import dev.breezes.settlements.domain.animation.AnimationKey;
 import dev.breezes.settlements.domain.animation.AnimationLibrary;
 import dev.breezes.settlements.domain.animation.BakedAnimationRegistry;
+import dev.breezes.settlements.domain.animation.BindVexesAnimations;
 import dev.breezes.settlements.domain.animation.CartographerAnimations;
 import dev.breezes.settlements.domain.animation.ChopAnimations;
 import dev.breezes.settlements.domain.animation.DefaultUmbrellaAnimatorFactory;
@@ -85,7 +86,8 @@ public abstract class ClientAnimationModule {
                         Map.entry(AnimationKey.of(AnimationArchetype.DIG, ItemCategory.SHOVEL), DigAnimations.dig()),
                         Map.entry(AnimationKey.of(AnimationArchetype.TILL, ItemCategory.GENERIC), TillAnimations.till()),
                         Map.entry(AnimationKey.of(AnimationArchetype.FORGE, ItemCategory.GENERIC), ForgeAnimations.forge()),
-                        Map.entry(AnimationKey.of(AnimationArchetype.READ_BOOK, ItemCategory.GENERIC), ReadBookAnimations.readBook())))
+                        Map.entry(AnimationKey.of(AnimationArchetype.READ_BOOK, ItemCategory.GENERIC), ReadBookAnimations.readBook()),
+                        Map.entry(AnimationKey.of(AnimationArchetype.BIND_VEXES, ItemCategory.GENERIC), BindVexesAnimations.bindVexes())))
                 .build();
     }
 

@@ -37,6 +37,7 @@ import dev.breezes.settlements.application.ai.behavior.usecases.villager.forge.F
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.idle.WalkDogConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.leatherworking.dyeleather.DyeLeatherConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.leatherworking.washleather.WashLeatherConfig;
+import dev.breezes.settlements.application.ai.behavior.usecases.villager.librarian.BindVexesConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.logistics.CollectDemandedItemConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.logistics.ManageChestsConfig;
 import dev.breezes.settlements.application.ai.behavior.usecases.villager.logistics.RetrieveProjectilesConfig;
@@ -97,6 +98,12 @@ public final class ConfigModule {
     @Singleton
     static MarkRaidWaveConfig markRaidWaveConfig() {
         return ConfigFactory.create(MarkRaidWaveConfig.class);
+    }
+
+    @Provides
+    @Singleton
+    static BindVexesConfig bindVexesConfig() {
+        return ConfigFactory.create(BindVexesConfig.class);
     }
 
     @Provides

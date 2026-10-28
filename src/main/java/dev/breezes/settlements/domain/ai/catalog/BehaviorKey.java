@@ -95,6 +95,7 @@ public record BehaviorKey(String id) {
 
     // Enchanting
     public static final BehaviorKey ENCHANT_ITEM = new BehaviorKey("enchant_item");
+    public static final BehaviorKey BIND_VEXES = new BehaviorKey("bind_vexes");
 
     // Leatherworking
     public static final BehaviorKey WASH_LEATHER = new BehaviorKey("wash_leather");

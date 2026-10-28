@@ -80,6 +80,8 @@
   "block.settlements.cultivation_lily": "Cultivation Lily",
   "block.settlements.ballista": "Ballista",
 
+  "effect.settlements.bound": "Bound",
+
   "creative_tab.settlements": "Settlements",
 
   "ui.settlements.behavior.behavior.harvest_sugarcane": "Harvest Sugarcane",
@@ -131,6 +133,7 @@
   "ui.settlements.behavior.behavior.survey_landscape": "Survey Landscape",
   "ui.settlements.behavior.behavior.chart_raiders": "Chart Raiders",
   "ui.settlements.behavior.behavior.mark_raid_wave": "Mark Raid Wave",
+  "ui.settlements.behavior.behavior.bind_vexes": "Bind Vexes",
   "ui.settlements.behavior.behavior.courtship_initiate": "Initiate Courtship",
   "ui.settlements.behavior.behavior.courtship_accept": "Accept Courtship",
   "ui.settlements.behavior.behavior.donate_emeralds": "Donate Emeralds",

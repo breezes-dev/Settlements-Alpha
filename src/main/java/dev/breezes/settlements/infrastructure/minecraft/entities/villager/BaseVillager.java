@@ -1372,6 +1372,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
                 MemoryTypeRegistry.TRADE_INITIATE_COOLDOWN.getModuleType(),
                 MemoryTypeRegistry.GOLEM_SUMMON_COOLDOWN.getModuleType(),
                 MemoryTypeRegistry.CHART_RAIDERS_COOLDOWN.getModuleType(),
+                MemoryTypeRegistry.BIND_VEXES_COOLDOWN.getModuleType(),
                 MemoryTypeRegistry.REFUSED_BALLISTAS.getModuleType(),
                 MemoryTypeRegistry.RETRIEVABLE_PROJECTILES.getModuleType()
         );

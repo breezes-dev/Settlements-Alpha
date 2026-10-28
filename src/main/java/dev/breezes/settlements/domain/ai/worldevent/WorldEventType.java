@@ -112,6 +112,7 @@ public enum WorldEventType {
     LANDSCAPE_SURVEYED(ObservationType.ENVIRONMENT, 1.2F, true, true),
     RAIDERS_CHARTED(ObservationType.THREAT, 2.0F, true, true),
     RAID_WAVE_MARKED(ObservationType.THREAT, 2.0F, true, true),
+    VEXES_BOUND(ObservationType.THREAT, 2.0F, true, true),
     CHEST_MANAGED(ObservationType.RESOURCE, 1.6F, true, true),
     ITEM_COLLECTED(ObservationType.RESOURCE, 1.0F, false, false),
     ZOMBIE_SIGHTED(ObservationType.THREAT, 1.6F, true, true, true),

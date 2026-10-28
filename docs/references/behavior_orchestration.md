@@ -386,8 +386,9 @@ does, reads `PlanRuntimeState.isBehaviorActive()`.
 Stimuli are pollable state, never broadcasts. The invite-accept policies read the courtship and trade session registries,
 which the matching initiate behavior writes when it sends its invite; demanded-item pickup, projectile retrieval, and
 trade initiation read sensor memories; combat reads the villager's threat verdict; a raid duty reads the raid at the
-villager's position. A registry is the state of record for a first-accept-wins offer, and a broadcast log cannot be one,
-because two readers of the same announcement both believe they have the offer.
+villager's position, and vex binding also reads the hostiles sensor memory. A registry is the state of record for a
+first-accept-wins offer, and a broadcast log cannot be one, because two readers of the same announcement both believe
+they have the offer.
 
 A sensor that feeds a policy remembers its targets, such as the seller or the dropped items, rather than a flag that some
 exist. The behavior the policy installs re-checks the remembered target and gives up when it no longer holds, rather
@@ -408,8 +409,8 @@ lasts. The runner, its actions and the combat options are in [`threat_response.m
 
 A raid duty is a `DUTY` policy narrowed to the raid activity it serves, with one policy per duty.
 `isAdmissibleDuring` sees the activity but not the villager, so a single policy dispatching every profession's duty
-could not keep a pre-raid duty out of the wave. Charting serves a live wave, while next-wave marking serves the
-pre-wave window. `OverridePolicyModule` owns duty membership and ordering.
+could not keep a pre-raid duty out of the wave. Charting and vex binding serve a live wave, while next-wave marking
+serves the pre-wave window. `OverridePolicyModule` owns duty membership and ordering.
 
 A duty checks its raid phase through `ActivityArbiter.isRaidWaveLive` or `ActivityArbiter.isRaidAwaitingWave`, the
 predicates behind the matching raid activities. The arbiter re-derives the activity on its own cadence, while a duty
@@ -420,6 +421,15 @@ Next-wave marking also reads `RaidWaveMarkRegistry`, the authority for the windo
 mark. Evaluation never takes a claim, because requesting execution does not guarantee a start. A sighting that ends
 before commitment releases its claim; once committed, the mark belongs to the raid window and survives its
 cartographer's interruption or removal. This separates the duty's short presentation from the result's lifetime.
+
+Vex binding keeps no state of its own. The `settlements:bound` effect on a target is the only record of a bind: a
+target that holds it is not a candidate, and two librarians that pick the same target each re-check it when they
+commit, so the second binds only what is still unbound. Vanilla sends an entity's effects only to that entity when it
+is a player, so `BoundEffectSyncServerEvents` sends Bound to every player tracking the bound entity through vanilla's
+own effect packets. A client therefore holds the real effect with its remaining duration, and `BindRingRenderer` draws
+the bind's rings from that copy, with no payload or mirrored state to keep equal. Targets come from the hostiles the
+librarian senses, so an entity in the `settlements:bindable` tag is bound only if it is also in
+`settlements:villager_enemies`.
 
 A duty that stands still depends on the raid packages' gated movement as much as one that moves (see
 [Reactive and Baby Activities](#reactive-and-baby-activities)).

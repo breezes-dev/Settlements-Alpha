@@ -121,9 +121,8 @@ public abstract class ClientAnimationModule {
                 .animations(Map.of(
                         NavigationType.STROLL, LocomotionAnimations.stroll(),
                         NavigationType.WALK, LocomotionAnimations.walk(),
-                        NavigationType.RUN, LocomotionAnimations.jog(),
-                        NavigationType.SPRINT, LocomotionAnimations.run(),
-                        NavigationType.PANIC, LocomotionAnimations.panicRun()))
+                        NavigationType.RUN, LocomotionAnimations.run(),
+                        NavigationType.SPRINT, LocomotionAnimations.sprint()))
                 .build();
     }
 

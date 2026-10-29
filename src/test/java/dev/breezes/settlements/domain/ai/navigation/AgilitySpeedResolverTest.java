@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class AgilitySpeedResolverTest {
 
@@ -46,7 +45,7 @@ class AgilitySpeedResolverTest {
     }
 
     @ParameterizedTest
-    @MethodSource("speedDerivableTypesAtAgilities")
+    @MethodSource("navigationTypesAtAgilities")
     void resolveNearestNavigationType_returnsType_whenSpeedIsThatTypesSpeedAtTheSameAgility(NavigationType type,
                                                                                            double agility) {
         // Arrange
@@ -87,22 +86,8 @@ class AgilitySpeedResolverTest {
         assertEquals(NavigationType.WALK, result);
     }
 
-    @ParameterizedTest
-    @ValueSource(doubles = {0.1, 0.5, 0.9})
-    void resolveNearestNavigationType_neverReturnsPanic_whenSpeedIsPanicSpeed(double agility) {
-        // Arrange
-        float speedModifier = AgilitySpeedResolver.resolve(NavigationType.PANIC, agility);
-
-        // Act
-        NavigationType result = AgilitySpeedResolver.resolveNearestNavigationType(speedModifier, agility);
-
-        // Assert
-        assertNotEquals(NavigationType.PANIC, result);
-    }
-
-    private static Stream<Arguments> speedDerivableTypesAtAgilities() {
+    private static Stream<Arguments> navigationTypesAtAgilities() {
         return Arrays.stream(NavigationType.values())
-                .filter(type -> type != NavigationType.PANIC)
                 .flatMap(type -> Stream.of(0.1, 0.5, 0.9).map(agility -> Arguments.of(type, agility)));
     }
 

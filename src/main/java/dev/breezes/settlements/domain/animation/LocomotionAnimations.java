@@ -110,7 +110,7 @@ public final class LocomotionAnimations {
                         r(15, 2.5F, 0, 0), r(16, 1.72F, 0, 0.7F), r(17, -0.14F, 0, 1.49F), r(18, -2.36F, 0, 2.23F), r(19, -4.22F, 0, 2.78F),
                         r(20, -5, 0, 3.0F))),
                 rotations(AnimationTargets.BODY_ROTATION, Easing.CUBIC, keys(
-                        r(0, 4, -4, 0), r(5, 6, -3, 0), r(10, 4, 4, 0), r(15, 6, 3, 0), r(20, 4, -4, 0))),
+                        r(0, 2, -4, 0), r(5, 3, -3, 0), r(10, 2, 4, 0), r(15, 3, 3, 0), r(20, 2, -4, 0))),
                 translations(AnimationTargets.BODY_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0, 0), p(5, 0, -0.4, 0), p(7, 0, -0.4, 0), p(10, 0, 0, 0), p(15, 0, -0.4, 0), p(17, 0, -0.4, 0), p(20, 0, 0, 0))),
                 rotations(AnimationTargets.HEAD_ROTATION, Easing.LINEAR, keys(
@@ -125,8 +125,10 @@ public final class LocomotionAnimations {
                         p(19, 0, -0.01, 0), p(20, 0, 0, 0))));
     }
 
-    public static KeyframeAnimation jog() {
-        return gait("jog", 16,
+    // TODO: play this for nitwits once the locomotion library can resolve a gait per profession;
+    //  no NavigationType keys it until then
+    public static KeyframeAnimation nitwitWalk() {
+        return gait("nitwit_walk", 16,
                 rotations(AnimationTargets.ARMS_CROSSED_ROTATION, Easing.LINEAR, keys(
                         r(0, -2.5F, -5.0F, -6.25F), r(2, -10, -8, -10), r(4, -2.5F, -5.0F, -6.25F), r(6, 5, 0, 0),
                         r(8, -2.5F, 5.0F, 6.25F), r(10, -10, 8, 10), r(12, -2.5F, 5.0F, 6.25F), r(14, 5, 0, 0),
@@ -191,7 +193,7 @@ public final class LocomotionAnimations {
                 rotations(AnimationTargets.NOSE_ROTATION, Easing.LINEAR, keys(
                         r(0, -10, 0, 0), r(1, -25, 0, 0), r(4, 5, 0, 0), r(6, -25, 0, 0), r(9, 5, 0, 0), r(10, -10, 0, 0))),
                 rotations(AnimationTargets.BODY_ROTATION, Easing.CUBIC, keys(
-                        r(0, 10, 0, 0), r(3, 5, 3, 2), r(5, 10, 0, 0), r(8, 5, -3, -2), r(10, 10, 0, 0))),
+                        r(0, 5, 0, 0), r(3, 2.5F, 3, 2), r(5, 5, 0, 0), r(8, 2.5F, -3, -2), r(10, 5, 0, 0))),
                 translations(AnimationTargets.BODY_TRANSLATION, Easing.CUBIC, keys(
                         p(1, 0, 0, 0), p(3, 0, -1.0, 0), p(4, 0, -1.0, 0), p(5, 0, 0, 0), p(6, 0, 0, 0), p(8, 0, -1.0, 0), p(9, 0, -1.0, 0), p(10, 0, 0, 0))),
                 translations(AnimationTargets.MONOBROW_TRANSLATION, Easing.CUBIC, keys(
@@ -220,8 +222,8 @@ public final class LocomotionAnimations {
                         s(0, 1.0F, 1.3F, 1.0F))));
     }
 
-    public static KeyframeAnimation panicRun() {
-        return gait("panic_run", 10,
+    public static KeyframeAnimation sprint() {
+        return gait("sprint", 10,
                 rotations(AnimationTargets.ARMS_CROSSED_ROTATION, Easing.CUBIC, keys(
                         r(0, -20, -10, -5), r(3, 0, 0, 0), r(5, -20, 10, 5), r(8, 0, 0, 0), r(10, -20, -10, -5))),
                 translations(AnimationTargets.ARMS_CROSSED_TRANSLATION, Easing.CUBIC, keys(
@@ -239,7 +241,7 @@ public final class LocomotionAnimations {
                 rotations(AnimationTargets.NOSE_ROTATION, Easing.LINEAR, keys(
                         r(0, -10, 0, 0), r(1, -25, 0, 0), r(4, 5, 0, 0), r(6, -25, 0, 0), r(9, 5, 0, 0), r(10, -10, 0, 0))),
                 rotations(AnimationTargets.BODY_ROTATION, Easing.CUBIC, keys(
-                        r(0, -10, 0, 0), r(3, -5, 3, 2), r(5, -10, 0, 0), r(8, -5, -3, -2), r(10, -10, 0, 0))),
+                        r(0, -5, 0, 0), r(3, -2.5F, 3, 2), r(5, -5, 0, 0), r(8, -2.5F, -3, -2), r(10, -5, 0, 0))),
                 translations(AnimationTargets.BODY_TRANSLATION, Easing.CUBIC, keys(
                         p(1, 0, 0, 0), p(3, 0, -1.0, 0), p(4, 0, -1.0, 0), p(5, 0, 0, 0), p(6, 0, 0, 0), p(8, 0, -1.0, 0), p(9, 0, -1.0, 0), p(10, 0, 0, 0))),
                 translations(AnimationTargets.MONOBROW_TRANSLATION, Easing.CUBIC, keys(

@@ -50,7 +50,7 @@ class VillagerAnimationPipelineTest {
     private static final KeyframeAnimation PONDER = IdleAnimations.ponder();
     private static final KeyframeAnimation BLINK = AmbientAnimations.blink();
     private static final KeyframeAnimation WALK = LocomotionAnimations.walk();
-    private static final KeyframeAnimation JOG = LocomotionAnimations.jog();
+    private static final KeyframeAnimation RUN = LocomotionAnimations.run();
     private static final KeyframeAnimation WAVE = WaveAnimations.wave();
     private static final KeyframeAnimation INTERACT = InteractAnimations.interact();
     private static final KeyframeAnimation FIGHT_FISH = FishingAnimations.fightFish();
@@ -90,9 +90,8 @@ class VillagerAnimationPipelineTest {
             .animations(Map.of(
                     NavigationType.STROLL, LocomotionAnimations.stroll(),
                     NavigationType.WALK, WALK,
-                    NavigationType.RUN, JOG,
-                    NavigationType.SPRINT, LocomotionAnimations.run(),
-                    NavigationType.PANIC, LocomotionAnimations.panicRun()))
+                    NavigationType.RUN, RUN,
+                    NavigationType.SPRINT, LocomotionAnimations.sprint()))
             .build();
 
     private static final BakedAnimationRegistry REGISTRY =
@@ -346,7 +345,7 @@ class VillagerAnimationPipelineTest {
     }
 
     @Test
-    void blink_closesTheEyesFully_overTheJogsRaisedLids() {
+    void blink_closesTheEyesFully_overTheRunsRaisedLids() {
         // Arrange
         VillagerAnimationPipeline pipeline = pipeline();
         VillagerAnimationSnapshot snapshot = new VillagerAnimationSnapshot();
@@ -355,7 +354,7 @@ class VillagerAnimationPipelineTest {
             closedHeight = Math.max(closedHeight,
                     clipVector(BLINK, AnimationTargets.EYELID_LEFT_TRANSLATION, elapsed).y());
         }
-        float raisedHeight = clipVector(JOG, AnimationTargets.EYELID_LEFT_TRANSLATION, 0.0F).y();
+        float raisedHeight = clipVector(RUN, AnimationTargets.EYELID_LEFT_TRANSLATION, 0.0F).y();
         float lowestHeight = Float.POSITIVE_INFINITY;
         float highestHeight = Float.NEGATIVE_INFINITY;
 
@@ -989,7 +988,7 @@ class VillagerAnimationPipelineTest {
                 .headPitchDegrees(LOOK_PITCH_DEGREES)
                 .bodyHeadingDegrees(90.0F)
                 .upsideDown(true)
-                .navigationType(NavigationType.PANIC)
+                .navigationType(NavigationType.SPRINT)
                 .limbSwing(7.0F)
                 .limbSwingAmount(VillagerAnimationPipeline.FULL_WEIGHT_LIMB_SWING_AMOUNT)
                 .motionArchetype(AnimationArchetype.REEL_OUT)

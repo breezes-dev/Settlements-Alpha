@@ -371,8 +371,8 @@ procedural raise limit.
 [HeadFrame](../../src/main/java/dev/breezes/settlements/domain/animation/HeadFrame.java) is the head's orientation in
 model space, composed from the evaluated root, torso, and head rotations in the order the model applies them. The head
 is a child of the torso, and the root rotates everything above it, so a torso lean or a root turn moves the head too:
-the jog pitches the torso forward and its head track pitches the head back, and the head channel alone would read a
-false pitch. The villager part between root and torso carries no channel. The frame assumes no part on that chain has
+under a clip that pitches the torso forward and the head back, the head channel alone would read a false pitch. The
+villager part between root and torso carries no channel. The frame assumes no part on that chain has
 a rest rotation, and
 [SettlementsVillagerModel](../../src/main/java/dev/breezes/settlements/infrastructure/minecraft/entities/villager/model/SettlementsVillagerModel.java)
 fails at construction if one gains one. The model keeps its own composition of the same chain for head-worn items,
@@ -770,7 +770,7 @@ changing the system, cover the smallest relevant boundary:
   agreement within a stated tolerance across frame rates for a moving target, the heading wrap, jumps, and the
   upside-down flip;
 - the head trail on a fixed target under a turning body and at its clamp, the head frame under torso and root turns and
-  the jog's lean, and the nose lag's settling, snapping, suppression, and bound;
+  a forward lean with the head pitched back, and the nose lag's settling, snapping, suppression, and bound;
 - the look residual at zero on a settled look and carrying a head hold or a turn below the head, the brow reaction's
   direction, its rise and return across frame rates, its suppression without pausing, the procedural raise limit over
   a neutral and an authored raise, and the brow bounds;

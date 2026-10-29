@@ -32,7 +32,14 @@ public record ScheduleProfile(
                     .defaultSleepTick(TimeOfDay.AT_18_30.getMinecraftTick())
                     .scheduleDescription("Early for fresh preparation")
                     .build()),
-            Map.entry(VillagerProfessionKey.CARTOGRAPHER, standardHours(VillagerProfessionKey.CARTOGRAPHER)),
+            Map.entry(VillagerProfessionKey.CARTOGRAPHER, ScheduleProfile.builder()
+                    .profession(VillagerProfessionKey.CARTOGRAPHER)
+                    .defaultWakeTick(TimeOfDay.AT_07_30.getMinecraftTick())
+                    .workStartTick(TimeOfDay.AT_08_30.getMinecraftTick())
+                    .workEndTick(TimeOfDay.AT_16_00.getMinecraftTick())
+                    .defaultSleepTick(TimeOfDay.AT_19_30.getMinecraftTick())
+                    .scheduleDescription("Up early to survey, out late with the stars")
+                    .build()),
             Map.entry(VillagerProfessionKey.CLERIC, standardHours(VillagerProfessionKey.CLERIC)),
             Map.entry(VillagerProfessionKey.FARMER, ScheduleProfile.builder()
                     .profession(VillagerProfessionKey.FARMER)

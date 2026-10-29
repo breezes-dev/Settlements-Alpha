@@ -166,9 +166,8 @@ class StatelessVillagerAnimatorTest {
                 .animations(Map.of(
                         NavigationType.STROLL, LocomotionAnimations.stroll(),
                         NavigationType.WALK, LocomotionAnimations.walk(),
-                        NavigationType.RUN, LocomotionAnimations.jog(),
-                        NavigationType.SPRINT, LocomotionAnimations.run(),
-                        NavigationType.PANIC, LocomotionAnimations.panicRun()))
+                        NavigationType.RUN, LocomotionAnimations.run(),
+                        NavigationType.SPRINT, LocomotionAnimations.sprint()))
                 .build();
         return new VillagerAnimationPipeline(animations, idle, ambient, locomotion,
                 BakedAnimationRegistry.forVillager(animations, idle, ambient, locomotion), new UmbrellaAnimator(0),

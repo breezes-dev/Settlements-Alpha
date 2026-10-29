@@ -105,9 +105,8 @@ class VillagerAnimationPipelineBrowTest {
             .animations(Map.of(
                     NavigationType.STROLL, LocomotionAnimations.stroll(),
                     NavigationType.WALK, LocomotionAnimations.walk(),
-                    NavigationType.RUN, LocomotionAnimations.jog(),
-                    NavigationType.SPRINT, LocomotionAnimations.run(),
-                    NavigationType.PANIC, LocomotionAnimations.panicRun()))
+                    NavigationType.RUN, LocomotionAnimations.run(),
+                    NavigationType.SPRINT, LocomotionAnimations.sprint()))
             .build();
 
     // The longest first wait for an ambient brow motion and the longest motion it can start

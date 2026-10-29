@@ -72,13 +72,11 @@ class HeadFrameTest {
     }
 
     @Test
-    void modelHeading_underTheJogsLeanWithItsHeadPitchedBack_isTheComposedHeading() {
-        // Arrange: the jog pitches the torso forward and the head back; the look turns the head well aside
+    void modelHeading_underATorsoLeanWithTheHeadPitchedBack_isTheComposedHeading() {
+        // Arrange: the torso pitches forward and the head back; the look turns the head well aside
         float lookYaw = 60.0F * DEGREES_TO_RADIANS;
-        float elapsedTicks = 4.0F;
-        float torsoPitch = clipValue(LocomotionAnimations.jog(), AnimationTargets.BODY_ROTATION, X, elapsedTicks);
-        float headPitch = clipValue(LocomotionAnimations.jog(), AnimationTargets.HEAD_ROTATION, X, elapsedTicks);
-        assertTrue(torsoPitch > 0.0F && headPitch < 0.0F, "the jog must lean forward with its head pitched back");
+        float torsoPitch = 20.0F * DEGREES_TO_RADIANS;
+        float headPitch = -10.0F * DEGREES_TO_RADIANS;
         AnimationPose pose = new AnimationPose(RIG);
         pose.set(TORSO, X, torsoPitch);
         pose.set(HEAD, X, headPitch);
@@ -188,12 +186,6 @@ class HeadFrameTest {
         // Assert: an inverted orientation would put the look below the leaning head
         assertEquals((float) -Math.sin(lean), headFrame.lookResidualDownward(), TOLERANCE);
         assertEquals(0.0F, headFrame.lookResidualRightward(), TOLERANCE);
-    }
-
-    private static float clipValue(KeyframeAnimation clip, AnimationTarget<?> channel, int axis, float elapsedTicks) {
-        AnimationPose sample = new AnimationPose(RIG);
-        BakedAnimation.bake(clip, RIG).sampleInto(sample, elapsedTicks);
-        return sample.get(RIG.indexOf(channel), axis);
     }
 
     private static VillagerAnimationObservation looking(float netHeadYawDegrees, float headPitchDegrees) {

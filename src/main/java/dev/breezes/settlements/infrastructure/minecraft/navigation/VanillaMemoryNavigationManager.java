@@ -12,7 +12,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ai.behavior.PositionTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
-import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.level.pathfinder.Path;
 
 import javax.annotation.Nonnull;
@@ -70,11 +69,6 @@ public class VanillaMemoryNavigationManager<T extends BaseVillager> implements I
         // If an intent is explicitly declared, use it
         if (walkTarget instanceof NavigationIntentWalkTarget intentWalkTarget) {
             return intentWalkTarget.navigationIntent;
-        }
-
-        // Vanilla panic flees at sprint speed, so speed alone cannot tell fleeing from sprinting
-        if (this.villager.getBrain().isActive(Activity.PANIC)) {
-            return NavigationType.PANIC;
         }
 
         // Return closest navigation type based on speed

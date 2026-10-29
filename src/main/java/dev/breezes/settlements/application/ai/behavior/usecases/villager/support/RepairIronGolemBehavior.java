@@ -57,6 +57,12 @@ public class RepairIronGolemBehavior extends VillagerStateMachineBehavior {
     private static final int DEFAULT_REPAIR_ATTEMPTS = 1;
     private static final int BUFF_DURATION_TICKS = ClockTicks.minutes(20).getTicksAsInt();
 
+    /**
+     * The wait after a start that found nothing to repair.
+     * Keeps a smith whose damaged golems are all out of reach from repeating its path search back to back.
+     */
+    private static final ClockTicks NOTHING_TO_REPAIR_RETRY = ClockTicks.seconds(10);
+
     private enum RepairStage implements StageKey {
         REPAIR_GOLEM,
         END;
@@ -79,8 +85,7 @@ public class RepairIronGolemBehavior extends VillagerStateMachineBehavior {
         // Create behavior preconditions
         this.preconditions.add(PerceivedEntityExistsCondition.<BaseVillager, IronGolem>builder()
                 .entityType(IronGolem.class)
-                .filter((villager, golem) -> this.isSufficientlyDamaged(golem))
-                .completionRange(1)
+                .filter((villager, golem) -> needsRepair(golem, this.config))
                 .build());
         this.preconditions.add(support.getDemandSignalService().requireItem(new ItemMatch.ItemRef(IRON_INGOT_ID), 1, 50, this.getClass().getSimpleName()));
 
@@ -153,9 +158,9 @@ public class RepairIronGolemBehavior extends VillagerStateMachineBehavior {
     protected void onBehaviorStart(@Nonnull Level world,
                                    @Nonnull BaseVillager villager,
                                    @Nonnull BehaviorContext<BaseVillager> context) {
-        Optional<IronGolem> targetCandidate = this.findClosestDamagedIronGolem(villager);
+        Optional<IronGolem> targetCandidate = this.findClosestReachableDamagedIronGolem(villager);
         if (targetCandidate.isEmpty()) {
-            this.requestStop("No damaged iron golem found within range");
+            this.requestStopAndDelayRetry(villager, "No reachable damaged iron golem sensed");
             return;
         }
 
@@ -167,7 +172,7 @@ public class RepairIronGolemBehavior extends VillagerStateMachineBehavior {
                 ? maxAttempts
                 : Math.min(maxAttempts, inventory.count(Items.IRON_INGOT));
         if (this.remainingRepairAttempts <= 0) {
-            this.requestStop("No iron ingots available at behavior start");
+            this.requestStopAndDelayRetry(villager, "No iron ingots available at behavior start");
             return;
         }
         this.shouldRewardExperience = false;
@@ -179,9 +184,7 @@ public class RepairIronGolemBehavior extends VillagerStateMachineBehavior {
                                    @Nonnull Level world,
                                    @Nonnull BaseVillager villager,
                                    @Nonnull BehaviorContext<BaseVillager> context) {
-        return this.targetToRepair != null
-                && this.targetToRepair.isAlive()
-                && this.targetToRepair.getHealth() < this.targetToRepair.getMaxHealth() * this.config.repairHpPercentage();
+        return this.targetToRepair != null && needsRepair(this.targetToRepair, this.config);
     }
 
     @Override
@@ -239,9 +242,9 @@ public class RepairIronGolemBehavior extends VillagerStateMachineBehavior {
         return 0;
     }
 
-    private Optional<IronGolem> findClosestDamagedIronGolem(@Nonnull BaseVillager villager) {
+    private Optional<IronGolem> findClosestReachableDamagedIronGolem(@Nonnull BaseVillager villager) {
         return this.getPerceivedEntities(villager)
-                .closest(IronGolem.class, golem -> this.isSufficientlyDamaged(golem)
+                .closest(IronGolem.class, golem -> needsRepair(golem, this.config)
                         && villager.getNavigationManager().canReach(Location.fromEntity(golem, false), 1), villager);
     }
 
@@ -251,9 +254,17 @@ public class RepairIronGolemBehavior extends VillagerStateMachineBehavior {
                 .orElse(PerceivedEntities.empty());
     }
 
-    private boolean isSufficientlyDamaged(@Nonnull IronGolem ironGolem) {
-        return ironGolem.isAlive()
-                && ironGolem.getHealth() < ironGolem.getMaxHealth() * this.config.repairHpPercentage();
+    private void requestStopAndDelayRetry(@Nonnull BaseVillager villager, @Nonnull String reason) {
+        villager.getSettlementsBrain().setMemory(MemoryTypeRegistry.REPAIR_IRON_GOLEM_RETRY_COOLDOWN, true,
+                NOTHING_TO_REPAIR_RETRY);
+        this.requestStop(reason);
+    }
+
+    /**
+     * Whether the golem is alive and below the configured health fraction that counts as damaged.
+     */
+    public static boolean needsRepair(@Nonnull IronGolem golem, @Nonnull RepairIronGolemConfig config) {
+        return golem.isAlive() && golem.getHealth() < golem.getMaxHealth() * config.repairHpPercentage();
     }
 
 }

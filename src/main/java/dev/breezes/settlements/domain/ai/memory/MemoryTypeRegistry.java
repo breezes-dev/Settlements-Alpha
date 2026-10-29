@@ -183,6 +183,13 @@ public final class MemoryTypeRegistry {
             "bind_vexes_cooldown", MemoryModuleTypeRegistry.BIND_VEXES_COOLDOWN);
 
     /**
+     * Present while a smith waits to retry an iron golem repair that found nothing to repair. Not saved with the
+     * brain, so a reload ends the wait.
+     */
+    public static final MemoryType.VanillaMemoryType<Boolean> REPAIR_IRON_GOLEM_RETRY_COOLDOWN = MemoryType.vanillaBacked(
+            "repair_iron_golem_retry_cooldown", MemoryModuleTypeRegistry.REPAIR_IRON_GOLEM_RETRY_COOLDOWN);
+
+    /**
      * All decaying spatial memories, in declaration order. Used by diagnostics (e.g. the
      * {@code /stest memory} dump) and any future bulk operation over the decaying store.
      */

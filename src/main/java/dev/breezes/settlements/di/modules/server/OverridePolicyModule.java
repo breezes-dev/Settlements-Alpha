@@ -9,6 +9,7 @@ import dev.breezes.settlements.application.ai.override.CombatOverridePolicy;
 import dev.breezes.settlements.application.ai.override.CourtshipAcceptOverridePolicy;
 import dev.breezes.settlements.application.ai.override.MarkRaidWaveOverridePolicy;
 import dev.breezes.settlements.application.ai.override.OverridePolicy;
+import dev.breezes.settlements.application.ai.override.RepairIronGolemOverridePolicy;
 import dev.breezes.settlements.application.ai.override.RetrieveProjectilesOverridePolicy;
 import dev.breezes.settlements.application.ai.override.TradeAcceptOverridePolicy;
 import dev.breezes.settlements.application.ai.override.TradeInitiateOverridePolicy;
@@ -27,6 +28,7 @@ public abstract class OverridePolicyModule {
                                                  ChartRaidersOverridePolicy chartRaiders,
                                                  MarkRaidWaveOverridePolicy markRaidWave,
                                                  BindVexesOverridePolicy bindVexes,
+                                                 RepairIronGolemOverridePolicy repairIronGolem,
                                                  CourtshipAcceptOverridePolicy courtshipAccept,
                                                  TradeAcceptOverridePolicy tradeAccept,
                                                  CollectDemandedItemOverridePolicy collectDemandedItem,
@@ -37,6 +39,7 @@ public abstract class OverridePolicyModule {
                 chartRaiders,
                 markRaidWave,
                 bindVexes,
+                repairIronGolem,
                 courtshipAccept,
                 tradeAccept,
                 collectDemandedItem,

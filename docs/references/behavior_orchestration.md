@@ -362,6 +362,9 @@ above belongs to `OverrideArbiter`. An `OverrideRequest` takes one of two forms.
 wrapped in `SimpleBehaviorOverrideRunner`, which runs that one `IBehavior` under the behavior's own run-duration
 ceiling. The behavior is built fresh for every request, with its cooldowns force-completed, so its own cooldown never
 spans two runs: an override that repeats keeps its cadence in a brain memory instead ([Raid duties](#raid-duties)).
+Validation runs the behavior's preconditions on every evaluation that reaches the request. A behavior requested as an
+override therefore keeps path searches out of its preconditions and searches once, in its start. Its policy requests
+only once it has seen work for the behavior, rather than leaving that check to the preconditions.
 A runner the policy prepared is installed as is; that is how execution that is not one catalog behavior, such
 as a fight, enters the lane.
 
@@ -386,7 +389,7 @@ does, reads `PlanRuntimeState.isBehaviorActive()`.
 Stimuli are pollable state, never broadcasts. The invite-accept policies read the courtship and trade session registries,
 which the matching initiate behavior writes when it sends its invite; demanded-item pickup, projectile retrieval, and
 trade initiation read sensor memories; combat reads the villager's threat verdict; a raid duty reads the raid at the
-villager's position, and vex binding also reads the hostiles sensor memory. A registry is the state of record for a
+villager's position, and vex binding and golem repair also read a sensor memory. A registry is the state of record for a
 first-accept-wins offer, and a broadcast log cannot be one, because two readers of the same announcement both believe
 they have the offer.
 
@@ -410,12 +413,18 @@ lasts. The runner, its actions and the combat options are in [`threat_response.m
 A raid duty is a `DUTY` policy narrowed to the raid activity it serves, with one policy per duty.
 `isAdmissibleDuring` sees the activity but not the villager, so a single policy dispatching every profession's duty
 could not keep a pre-raid duty out of the wave. Charting and vex binding serve a live wave, while next-wave marking
-serves the pre-wave window. `OverridePolicyModule` owns duty membership and ordering.
+and golem repair serve the pre-wave window. `OverridePolicyModule` owns duty membership and ordering.
 
 A duty checks its raid phase through `ActivityArbiter.isRaidWaveLive` or `ActivityArbiter.isRaidAwaitingWave`, the
-predicates behind the matching raid activities. The arbiter re-derives the activity on its own cadence, while a duty
-reads the raid when it evaluates and again when it acts. Around a wave's start and end the two can differ for a
-moment, so a duty re-checks the raid when it acts rather than trusting that its admitting activity still holds.
+predicates behind the matching raid activities, when it evaluates. The arbiter re-derives the activity on its own
+cadence, so around a wave's start and end the activity and the raid can disagree for a moment. A duty whose act is
+wrong outside its phase therefore re-checks the raid when it acts rather than trusting that its admitting activity
+still holds. A duty whose act is right in any phase, such as golem repair, does not: the next admission check ends it,
+and what it already did stays.
+
+A duty that repeats keeps its cadence, or its wait after a start that found nothing to do, in an unsaved brain cooldown
+memory that its policy reads. Such a memory has no codec, yet it must still be listed in `BaseVillager.memoryTypes()`,
+or `setMemory` drops it silently.
 
 Next-wave marking also reads `RaidWaveMarkRegistry`, the authority for the window's first-claim lease and committed
 mark. Evaluation never takes a claim, because requesting execution does not guarantee a start. A sighting that ends
@@ -430,6 +439,14 @@ own effect packets. A client therefore holds the real effect with its remaining 
 the bind's rings from that copy, with no payload or mirrored state to keep equal. Targets come from the hostiles the
 librarian senses, so an entity in the `settlements:bindable` tag is bound only if it is also in
 `settlements:villager_enemies`.
+
+Golem repair runs the smiths' work behavior, `REPAIR_IRON_GOLEM`, as a duty, with no limit per window: a smith repairs
+again whenever a session ends while a golem it senses is still damaged and it holds iron. The policy requests only for
+a smith that holds iron, so the duty never posts an iron demand that a pre-wave window could not fill. A start that
+finds nothing to repair, such as a damaged golem out of reach, writes `REPAIR_IRON_GOLEM_RETRY_COOLDOWN`, so an
+unreachable golem costs one path search per retry rather than one per evaluation. The behavior writes it at work too,
+where nothing reads it. Like a bind, a repair keeps no state of its own; the golem's health is the record, so two
+smiths may start on one golem, and the one that finds it repaired stops before spending iron.
 
 A duty that stands still depends on the raid packages' gated movement as much as one that moves (see
 [Reactive and Baby Activities](#reactive-and-baby-activities)).

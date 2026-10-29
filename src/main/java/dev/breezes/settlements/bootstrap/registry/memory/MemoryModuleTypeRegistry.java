@@ -95,6 +95,10 @@ public final class MemoryModuleTypeRegistry {
             "bind_vexes_cooldown",
             () -> new MemoryModuleType<>(Optional.empty()));
 
+    public static final Supplier<MemoryModuleType<Boolean>> REPAIR_IRON_GOLEM_RETRY_COOLDOWN = REGISTRY.register(
+            "repair_iron_golem_retry_cooldown",
+            () -> new MemoryModuleType<>(Optional.empty()));
+
     public static final Supplier<MemoryModuleType<Set<GlobalPos>>> REFUSED_BALLISTAS = REGISTRY.register(
             "refused_ballistas",
             () -> new MemoryModuleType<>(Optional.empty()));

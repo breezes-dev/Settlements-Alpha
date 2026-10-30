@@ -10,6 +10,7 @@ import dev.breezes.settlements.domain.economy.catalog.TradeCatalogRegistry;
 import dev.breezes.settlements.domain.entities.VillagerProfessionKey;
 import dev.breezes.settlements.infrastructure.minecraft.data.framework.ProfessionCatalogDataManager;
 import jakarta.inject.Inject;
+import org.jspecify.annotations.Nullable;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -21,13 +22,15 @@ public class TradeCatalogDataManager extends ProfessionCatalogDataManager<StockP
 
     private static final String DIRECTORY_PATH = "settlements/trade_catalog";
 
-    private Map<VillagerProfessionKey, List<OfferEntry>> offersByProfession = Map.of();
-    private Map<VillagerProfessionKey, List<DemandEntry>> demandsByProfession = Map.of();
-    private Map<VillagerProfessionKey, List<SupplyEntry>> supplyByProfession = Map.of();
+    private final SharedStockDataManager sharedStockDataManager;
+
+    @Nullable
+    private volatile MergedView mergedView;
 
     @Inject
-    public TradeCatalogDataManager() {
+    public TradeCatalogDataManager(@Nonnull SharedStockDataManager sharedStockDataManager) {
         super(DIRECTORY_PATH, StockPolicyCodec.CODEC, "stock");
+        this.sharedStockDataManager = sharedStockDataManager;
     }
 
     @Override
@@ -41,43 +44,8 @@ public class TradeCatalogDataManager extends ProfessionCatalogDataManager<StockP
     }
 
     @Override
-    protected void onCatalogReloaded(@Nonnull Map<VillagerProfessionKey, List<StockPolicy>> byProfession) {
-        // Stock policies are already id-deduped per profession by the base class, so each of these
-        // projections can be derived straight from the list without re-merging by id.
-        Map<VillagerProfessionKey, List<OfferEntry>> offers = new LinkedHashMap<>();
-        Map<VillagerProfessionKey, List<DemandEntry>> demands = new LinkedHashMap<>();
-        Map<VillagerProfessionKey, List<SupplyEntry>> supply = new LinkedHashMap<>();
-
-        for (Map.Entry<VillagerProfessionKey, List<StockPolicy>> entry : byProfession.entrySet()) {
-            List<OfferEntry> professionOffers = new ArrayList<>();
-            List<DemandEntry> professionDemands = new ArrayList<>();
-            List<SupplyEntry> professionSupply = new ArrayList<>();
-
-            for (StockPolicy policy : entry.getValue()) {
-                if (policy.offer() != null) {
-                    professionOffers.add(policy.toOfferEntry());
-                }
-                if (policy.restock() != null) {
-                    professionDemands.add(policy.toDemandEntry());
-                }
-                if (policy.dump() != null) {
-                    professionSupply.add(policy.toSupplyEntry());
-                }
-            }
-
-            offers.put(entry.getKey(), List.copyOf(professionOffers));
-            demands.put(entry.getKey(), List.copyOf(professionDemands));
-            supply.put(entry.getKey(), List.copyOf(professionSupply));
-        }
-
-        this.offersByProfession = Map.copyOf(offers);
-        this.demandsByProfession = Map.copyOf(demands);
-        this.supplyByProfession = Map.copyOf(supply);
-    }
-
-    @Override
     public List<StockPolicy> stockPoliciesFor(@Nonnull VillagerProfessionKey profession) {
-        return this.valuesFor(profession);
+        return this.projectionFor(profession).policies();
     }
 
     @Override
@@ -90,7 +58,7 @@ public class TradeCatalogDataManager extends ProfessionCatalogDataManager<StockP
 
     @Override
     public List<DemandEntry> findDemands(@Nonnull VillagerProfessionKey buyerProfession, @Nonnull ItemMatch want) {
-        return this.demandsByProfession.getOrDefault(buyerProfession, List.of()).stream()
+        return this.demandsFor(buyerProfession).stream()
                 .filter(entry -> matchPriority(entry.match(), want) >= 0)
                 .sorted((left, right) -> Integer.compare(matchPriority(right.match(), want), matchPriority(left.match(), want)))
                 .toList();
@@ -98,17 +66,34 @@ public class TradeCatalogDataManager extends ProfessionCatalogDataManager<StockP
 
     @Override
     public List<OfferEntry> offersFor(@Nonnull VillagerProfessionKey profession) {
-        return this.offersByProfession.getOrDefault(profession, List.of());
+        return this.projectionFor(profession).offers();
     }
 
     @Override
     public List<DemandEntry> demandsFor(@Nonnull VillagerProfessionKey profession) {
-        return this.demandsByProfession.getOrDefault(profession, List.of());
+        return this.projectionFor(profession).demands();
     }
 
     @Override
     public List<SupplyEntry> supplyFor(@Nonnull VillagerProfessionKey profession) {
-        return this.supplyByProfession.getOrDefault(profession, List.of());
+        return this.projectionFor(profession).supply();
+    }
+
+    /**
+     * Returns the projections for a profession, which are the shared stock alone for a profession with no catalog file.
+     * The merged view is rebuilt on first use after either source reloads, so it never depends on reload order.
+     */
+    private Projection projectionFor(@Nonnull VillagerProfessionKey profession) {
+        List<StockPolicy> sharedPolicies = this.sharedStockDataManager.sharedStockPolicies();
+        Map<VillagerProfessionKey, List<StockPolicy>> professionPolicies = this.byProfession();
+
+        MergedView view = this.mergedView;
+        if (view == null || view.sharedSource() != sharedPolicies || view.professionSource() != professionPolicies) {
+            view = MergedView.build(sharedPolicies, professionPolicies);
+            this.mergedView = view;
+        }
+
+        return view.byProfession().getOrDefault(profession, view.sharedOnly());
     }
 
     private static int matchPriority(@Nonnull ItemMatch catalogMatch, @Nonnull ItemMatch want) {
@@ -122,6 +107,65 @@ public class TradeCatalogDataManager extends ProfessionCatalogDataManager<StockP
                 case ItemMatch.TagRef wantTagRef -> tagRef.tag().equals(wantTagRef.tag()) ? 3 : -1;
             };
         };
+    }
+
+    private record Projection(List<StockPolicy> policies,
+                              List<OfferEntry> offers,
+                              List<DemandEntry> demands,
+                              List<SupplyEntry> supply) {
+
+        /**
+         * Shared policies come first in their own order; a profession policy with a shared policy's id takes that
+         * policy's position, and the remaining profession policies follow in their own order.
+         */
+        static Projection merge(List<StockPolicy> sharedPolicies, List<StockPolicy> professionPolicies) {
+            Map<String, StockPolicy> mergedById = new LinkedHashMap<>();
+            for (StockPolicy policy : sharedPolicies) {
+                mergedById.put(policy.id(), policy);
+            }
+            for (StockPolicy policy : professionPolicies) {
+                mergedById.put(policy.id(), policy);
+            }
+
+            List<StockPolicy> policies = List.copyOf(mergedById.values());
+            List<OfferEntry> offers = new ArrayList<>();
+            List<DemandEntry> demands = new ArrayList<>();
+            List<SupplyEntry> supply = new ArrayList<>();
+            for (StockPolicy policy : policies) {
+                if (policy.offer() != null) {
+                    offers.add(policy.toOfferEntry());
+                }
+                if (policy.restock() != null) {
+                    demands.add(policy.toDemandEntry());
+                }
+                if (policy.dump() != null) {
+                    supply.add(policy.toSupplyEntry());
+                }
+            }
+
+            return new Projection(policies, List.copyOf(offers), List.copyOf(demands), List.copyOf(supply));
+        }
+
+    }
+
+    /**
+     * The sources a view was built from are kept so a reload of either is detected by reference identity.
+     */
+    private record MergedView(List<StockPolicy> sharedSource,
+                              Map<VillagerProfessionKey, List<StockPolicy>> professionSource,
+                              Map<VillagerProfessionKey, Projection> byProfession,
+                              Projection sharedOnly) {
+
+        static MergedView build(List<StockPolicy> sharedPolicies,
+                                Map<VillagerProfessionKey, List<StockPolicy>> professionPolicies) {
+            Map<VillagerProfessionKey, Projection> byProfession = new LinkedHashMap<>();
+            professionPolicies.forEach((profession, policies) ->
+                    byProfession.put(profession, Projection.merge(sharedPolicies, policies)));
+
+            return new MergedView(sharedPolicies, professionPolicies, Map.copyOf(byProfession),
+                    Projection.merge(sharedPolicies, List.of()));
+        }
+
     }
 
 }

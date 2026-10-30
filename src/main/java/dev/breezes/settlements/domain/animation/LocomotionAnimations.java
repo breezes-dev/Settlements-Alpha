@@ -1,5 +1,6 @@
 package dev.breezes.settlements.domain.animation;
 
+import dev.breezes.settlements.domain.attachment.LanternSlot;
 import dev.breezes.settlements.domain.presentation.ArmConfiguration;
 import dev.breezes.settlements.shared.util.ResourceLocationUtil;
 import dev.breezes.settlements.shared.util.RotationUtil;
@@ -9,6 +10,7 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -82,7 +84,8 @@ public final class LocomotionAnimations {
                 rotations(AnimationTargets.MONOBROW_ROTATION, Easing.CUBIC, keys(
                         r(0, 0, 0, -1.0F), r(13, 0, 0, 1.0F), r(25, 0, 0, -1.0F))),
                 translations(AnimationTargets.MONOBROW_TRANSLATION, Easing.CUBIC, keys(
-                        p(0, 0, -0.1, 0), p(6, 0, 0, 0), p(13, 0, -0.1, 0), p(19, 0, 0, 0), p(25, 0, -0.1, 0))));
+                        p(0, 0, -0.1, 0), p(6, 0, 0, 0), p(13, 0, -0.1, 0), p(19, 0, 0, 0), p(25, 0, -0.1, 0))),
+                lanternSwingRotations(25, 2, 6, 2));
     }
 
     public static KeyframeAnimation walk() {
@@ -122,7 +125,8 @@ public final class LocomotionAnimations {
                 translations(AnimationTargets.MONOBROW_TRANSLATION, Easing.LINEAR, keys(
                         p(0, 0, 0, 0), p(1, 0, -0.01, 0), p(4, 0, -0.09, 0), p(5, 0, -0.1, 0), p(9, 0, -0.01, 0),
                         p(10, 0, 0, 0), p(11, 0, -0.01, 0), p(14, 0, -0.09, 0), p(15, 0, -0.1, 0), p(16, 0, -0.09, 0),
-                        p(19, 0, -0.01, 0), p(20, 0, 0, 0))));
+                        p(19, 0, -0.01, 0), p(20, 0, 0, 0))),
+                lanternSwingRotations(20, 2, 8, 3));
     }
 
     // TODO: play this for nitwits once the locomotion library can resolve a gait per profession;
@@ -173,7 +177,8 @@ public final class LocomotionAnimations {
                 scales(AnimationTargets.PUPIL_RIGHT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 0.7F, 1.0F))),
                 scales(AnimationTargets.MOUTH_SCALE, Easing.LINEAR, keys(
-                        s(0, 1.0F, 1.3F, 1.0F))));
+                        s(0, 1.0F, 1.3F, 1.0F))),
+                lanternSwingRotations(16, 2, 12, 5));
     }
 
     public static KeyframeAnimation run() {
@@ -219,7 +224,8 @@ public final class LocomotionAnimations {
                 scales(AnimationTargets.PUPIL_RIGHT_SCALE, Easing.LINEAR, keys(
                         s(0, 1.0F, 0.7F, 1.0F))),
                 scales(AnimationTargets.MOUTH_SCALE, Easing.LINEAR, keys(
-                        s(0, 1.0F, 1.3F, 1.0F))));
+                        s(0, 1.0F, 1.3F, 1.0F))),
+                lanternSwingRotations(10, 1, 14, 5));
     }
 
     public static KeyframeAnimation sprint() {
@@ -266,7 +272,8 @@ public final class LocomotionAnimations {
                 translations(AnimationTargets.MOUTH_TRANSLATION, Easing.CUBIC, keys(
                         p(0, 0, 0.2, 0), p(3, 0, 0.4, 0), p(5, 0, 0.2, 0), p(8, 0, 0.4, 0), p(10, 0, 0.2, 0))),
                 scales(AnimationTargets.MOUTH_SCALE, Easing.CUBIC, keys(
-                        s(0, 1.0F, 1.5F, 1.0F), s(3, 1.0F, 2.0F, 1.0F), s(5, 1.0F, 1.5F, 1.0F), s(8, 1.0F, 2.0F, 1.0F), s(10, 1.0F, 1.5F, 1.0F))));
+                        s(0, 1.0F, 1.5F, 1.0F), s(3, 1.0F, 2.0F, 1.0F), s(5, 1.0F, 1.5F, 1.0F), s(8, 1.0F, 2.0F, 1.0F), s(10, 1.0F, 1.5F, 1.0F))),
+                lanternSwingRotations(10, 1, 18, 6));
     }
 
     @SafeVarargs
@@ -290,6 +297,22 @@ public final class LocomotionAnimations {
 
     private static AnimationTrack<Vector3f> rotations(AnimationTarget<Vector3f> target, Easing easing, List<Keyframe<Vector3f>> keyframes) {
         return AnimationTrack.<Vector3f>builder().target(target).keyframes(withEasing(keyframes, easing)).build();
+    }
+
+    // Every key is an extreme, so CUBIC's zero slope at a key reads as the pendulum turning.
+    // Forward is negative pitch, and the cycle opens and closes on the forward extreme so the loop has no seam.
+    private static AnimationTrack<Vector3f> lanternSwingRotations(int cycleTicks,
+                                                                  int swingsPerCycle,
+                                                                  float forwardDegrees,
+                                                                  float backDegrees) {
+        int extremeCount = swingsPerCycle * 2;
+        List<Keyframe<Vector3f>> extremes = new ArrayList<>(extremeCount + 1);
+        for (int extreme = 0; extreme <= extremeCount; extreme++) {
+            int tick = Math.round((float) extreme * cycleTicks / extremeCount);
+            float pitchDegrees = extreme % 2 == 0 ? -forwardDegrees : backDegrees;
+            extremes.add(r(tick, pitchDegrees, 0, 0));
+        }
+        return rotations(SlotTargets.rotation(LanternSlot.LANTERN), Easing.CUBIC, extremes);
     }
 
     private static AnimationTrack<Vec3> translations(AnimationTarget<Vec3> target, Easing easing, List<Keyframe<Vec3>> keyframes) {

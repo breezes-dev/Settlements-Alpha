@@ -23,11 +23,15 @@ import dev.breezes.settlements.domain.presentation.SocketRegistry;
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.BaseVillager;
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.model.SettlementsVillagerModel;
 import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -49,6 +53,7 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
 
     private final VillagerAnimationRenderAdapter animationAdapter;
     private final ItemInHandRenderer itemInHandRenderer;
+    private final BlockRenderDispatcher blockRenderer;
     private final AttachmentModelRegistry attachmentModelRegistry;
     private final AttachmentProvider[] attachmentProviders;
     private final SlotAnchorRegistry slotAnchorRegistry;
@@ -61,10 +66,13 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
 
     // Scratch for applying rotations, so placing an attachment allocates no quaternion
     private final Quaternionf rotationScratch = new Quaternionf();
+    private final PoseStack socketPoseScratch = new PoseStack();
+    private final PoseStack attachmentPoseScratch = normalizedPoseStack();
 
     public AttachmentRenderLayer(@Nonnull RenderLayerParent<BaseVillager, SettlementsVillagerModel> renderer,
                                  @Nonnull VillagerAnimationRenderAdapter animationAdapter,
                                  @Nonnull ItemInHandRenderer itemInHandRenderer,
+                                 @Nonnull BlockRenderDispatcher blockRenderer,
                                  @Nonnull AttachmentModelRegistry attachmentModelRegistry,
                                  @Nonnull Set<AttachmentProvider> attachmentProviders,
                                  @Nonnull SlotAnchorRegistry slotAnchorRegistry,
@@ -73,6 +81,7 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
         super(renderer);
         this.animationAdapter = animationAdapter;
         this.itemInHandRenderer = itemInHandRenderer;
+        this.blockRenderer = blockRenderer;
         this.attachmentModelRegistry = attachmentModelRegistry;
         this.attachmentProviders = attachmentProviders.stream()
                 .sorted(Comparator.comparingInt(AttachmentProvider::renderOrder)
@@ -117,21 +126,34 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
         Socket socket = this.socketRegistry.get(anchor.socketFor(handPose));
         AttachmentDisplayProfile profile = this.displayProfileRegistry.get(attachment.slot(), attachment.category());
 
-        poseStack.pushPose();
-        if (socket.isInheritsBoneTransform()) {
-            this.getParentModel().applyBoneTransform(poseStack, socket.getBone());
-        }
-
-        this.applyTransform(poseStack, socket.getLocalTranslation(), socket.getLocalRotation(), socket.getLocalScale());
-        this.applyTransform(poseStack, profile.getTranslation(), profile.getRotation(), profile.getScale());
-        this.applySlotChannels(poseStack, snapshot.getPose(), attachment.slot(),
+        PoseStack attachmentPose = this.attachmentPoseScratch;
+        attachmentPose.last().pose().set(poseStack.last().pose());
+        attachmentPose.last().normal().set(poseStack.last().normal());
+        this.applySocket(attachmentPose, socket, profile.isHanging());
+        this.applyTransform(attachmentPose, profile.getTranslation(), profile.getRotation(), profile.getScale());
+        this.applySlotChannels(attachmentPose, snapshot.getPose(), attachment.slot(),
                 this.rootPivotOffsetFor(attachment.content()));
 
         ItemDisplayContext displayContext = profile.getDisplayContextOverride() == null
                 ? anchor.getDefaultDisplayContext()
                 : profile.getDisplayContextOverride();
-        this.renderContent(attachment.content(), villager, displayContext, poseStack, buffer, packedLight);
-        poseStack.popPose();
+        this.renderContent(attachment.content(), villager, displayContext, attachmentPose, buffer, packedLight);
+    }
+
+    private void applySocket(@Nonnull PoseStack poseStack, @Nonnull Socket socket, boolean hanging) {
+        PoseStack socketPose = hanging ? this.socketPoseScratch : poseStack;
+        if (hanging) {
+            socketPose.setIdentity();
+        }
+        if (socket.isInheritsBoneTransform()) {
+            this.getParentModel().applyBoneTransform(socketPose, socket.getBone());
+        }
+        this.applyTransform(socketPose, socket.getLocalTranslation(), socket.getLocalRotation(), socket.getLocalScale());
+        if (hanging) {
+            // Only the hook's position follows the bones; the incoming frame keeps the chain vertical through torso motion.
+            Matrix4f socketTransform = socketPose.last().pose();
+            poseStack.translate(socketTransform.m30(), socketTransform.m31(), socketTransform.m32());
+        }
     }
 
     private void renderContent(@Nonnull AttachmentContent content,
@@ -144,6 +166,15 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
             case AttachmentContent.ItemContent itemContent ->
                     this.itemInHandRenderer.renderItem(villager, itemContent.stack(), displayContext, false, poseStack,
                             buffer, packedLight);
+            case AttachmentContent.BlockStateContent blockContent -> {
+                // The model frame is y-down; centering after the flip puts the block's top center at the hook.
+                poseStack.scale(-1.0F, -1.0F, 1.0F);
+                poseStack.translate(-0.5F, -1.0F, -0.5F);
+                int blockLight = blockContent.glowing()
+                        ? LightTexture.pack(15, LightTexture.sky(packedLight)) : packedLight;
+                this.blockRenderer.renderSingleBlock(blockContent.state(), poseStack, buffer, blockLight,
+                        OverlayTexture.NO_OVERLAY);
+            }
             case AttachmentContent.ModelContent modelContent -> {
                 AttachmentModel model = this.attachmentModelRegistry.get(modelContent.modelId());
                 if (model != null) {
@@ -204,6 +235,13 @@ public final class AttachmentRenderLayer extends RenderLayer<BaseVillager, Settl
     private static int channelOf(@Nonnull Map<AttachmentSlot, Integer> channelBySlot, @Nonnull AttachmentSlot slot) {
         Integer channel = channelBySlot.get(slot);
         return channel == null ? NO_CHANNEL : channel;
+    }
+
+    private static PoseStack normalizedPoseStack() {
+        PoseStack poseStack = new PoseStack();
+        // Public matrix copies cannot copy Pose's normal-trust flag, so this reusable stack must always normalize normals.
+        poseStack.scale(1.0F, 1.0F, 2.0F);
+        return poseStack;
     }
 
     private static Map<AttachmentSlot, Integer> slotChannels(@Nonnull AnimationChannelKind kind) {

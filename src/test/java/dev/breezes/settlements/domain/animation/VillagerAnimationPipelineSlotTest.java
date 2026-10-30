@@ -169,7 +169,7 @@ class VillagerAnimationPipelineSlotTest {
                 .build();
         return new VillagerAnimationPipeline(ACTIONS, idle, ambient, locomotion,
                 BakedAnimationRegistry.forVillager(ACTIONS, idle, ambient, locomotion), new UmbrellaAnimator(0),
-                new Random(RANDOM_SEED));
+                new LanternAnimator(0), new Random(RANDOM_SEED));
     }
 
     private static void step(VillagerAnimationPipeline pipeline,

@@ -31,7 +31,7 @@ class TradeCatalogDataManagerTest {
             "nitwit", "shepherd", "toolsmith", "weaponsmith"
     };
 
-    private final TradeCatalogDataManager manager = new TradeCatalogDataManager();
+    private final TradeCatalogDataManager manager = new TradeCatalogDataManager(new SharedStockDataManager());
 
     @Test
     void validJson_loadsStockForItsProfession() {

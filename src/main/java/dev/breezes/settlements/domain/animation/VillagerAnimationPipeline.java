@@ -60,6 +60,7 @@ public final class VillagerAnimationPipeline {
     private final LocomotionAnimationLibrary locomotionLibrary;
     private final BakedAnimationRegistry registry;
     private final UmbrellaAnimator umbrellaAnimator;
+    private final LanternAnimator lanternAnimator;
 
     private final BakedAnimation breathingCycle;
     private final BakedAnimation sleep;
@@ -106,11 +107,10 @@ public final class VillagerAnimationPipeline {
     private final AnimationContribution outgoingAction = new AnimationContribution(VillagerAnimationRig.RIG);
     private final AnimationContribution posture = new AnimationContribution(VillagerAnimationRig.RIG);
     private final AnimationContribution carry = new AnimationContribution(VillagerAnimationRig.RIG);
+    private final AnimationContribution lanternCarry = new AnimationContribution(VillagerAnimationRig.RIG);
     private final AnimationContribution breathing = new AnimationContribution(VillagerAnimationRig.RIG);
-    private final AnimationContribution unclaimed = new AnimationContribution(VillagerAnimationRig.RIG);
     private final AnimationContribution[] alternatives = new AnimationContribution[2];
     private final float[] shares = new float[2];
-    private final AnimationContribution[] armClaimants = new AnimationContribution[4];
     private final HeadFrame headFrame = new HeadFrame();
     // Separate scratch keeps observational angles out of the live followers
     private final HeadTrail settledHeadTrail = new HeadTrail();
@@ -124,6 +124,7 @@ public final class VillagerAnimationPipeline {
      *
      * @param registry         holds the baked form of every clip the libraries supply
      * @param umbrellaAnimator this villager's own umbrella coordinator, advanced only by this pipeline
+     * @param lanternAnimator  this villager's own lantern coordinator, advanced only by this pipeline
      * @param random           random source for scheduling various animations
      * @throws IllegalArgumentException if the registry lacks the sleep clip, the standing pose, an idle animation, or a
      *                                  clip of the ambient library, the blink clip never moves the eyelids, or a brow
@@ -135,11 +136,13 @@ public final class VillagerAnimationPipeline {
                                      @Nonnull LocomotionAnimationLibrary locomotionLibrary,
                                      @Nonnull BakedAnimationRegistry registry,
                                      @Nonnull UmbrellaAnimator umbrellaAnimator,
+                                     @Nonnull LanternAnimator lanternAnimator,
                                      @Nonnull Random random) {
         this.animationLibrary = animationLibrary;
         this.locomotionLibrary = locomotionLibrary;
         this.registry = registry;
         this.umbrellaAnimator = umbrellaAnimator;
+        this.lanternAnimator = lanternAnimator;
         this.actionLayerStorage = AnimationLayer.persistent(animationLibrary.resolve(AnimationArchetype.NONE, AnimationSelectionContext.generic()), 0L);
 
         this.breathingCycle = registry.baked(ambientAnimationLibrary.breathingCycle());
@@ -220,6 +223,14 @@ public final class VillagerAnimationPipeline {
         this.updateUnhappy(observation.isUnhappy(), tick, partialTicks);
         // A villager going to bed in the rain stows its umbrella rather than sleeping under it
         this.umbrellaAnimator.update(tick, !this.sleeping && observation.isUmbrellaRequested());
+        ArmConfiguration armConfiguration = this.resolveArmClaims(observation);
+        boolean lanternYields = armConfiguration.left() == ArmPose.STRAIGHT
+                || armConfiguration.right() == ArmPose.STRAIGHT
+                || observation.isHandItemShown()
+                || this.sleeping
+                || this.umbrellaAnimator.isVisible(tick, partialTicks);
+        this.lanternAnimator.update(tick, partialTicks, observation.isLanternCheckDecided(), observation.isLanternRequested(),
+                lanternYields);
 
         // Sleep draws the villager in a bed pose the followers never tracked, so they start over on waking
         this.liveStep.measure(tick, partialTicks, wakes);
@@ -243,14 +254,15 @@ public final class VillagerAnimationPipeline {
 
         this.lookAndUnhappy.apply(pose, this.suppression, observation, headTrail,
                 this.unhappyWeight(tick, partialTicks));
-        float locomotionWeight = this.applyLocomotion(pose, observation);
-        boolean idleAnimationPlaying = this.applyIdleAnimation(pose, tick, partialTicks);
+        this.applyLocomotion(pose, observation);
+        this.applyIdleAnimation(pose, tick, partialTicks);
         this.applyAction(pose, tick, partialTicks);
         if (this.sleeping) {
             float sleepElapsedTicks = Math.max(0.0F, (tick - this.sleepStartTick) + partialTicks);
             this.sleep.contribute(this.posture, sleepElapsedTicks);
             AnimationCompositor.applyContribution(pose, this.suppression, 1.0F, this.posture);
         }
+
         this.applyCarry(pose, snapshot, tick, partialTicks);
 
         // Ambient applies above every authored slot so breathing shows over an action's torso and a blink closes the
@@ -279,12 +291,7 @@ public final class VillagerAnimationPipeline {
         Gaze.apply(pose, this.suppression.remaining(SuppressibleComponent.GAZE), this.headFrame);
         PupilContainment.apply(pose);
 
-        // Carry claims no arm, and an action keeps its claim until it expires rather than until its weight fades
-        this.armClaimants[0] = this.sleeping ? this.posture : this.unclaimed;
-        this.armClaimants[1] = this.actionLayer != null ? this.currentAction : this.unclaimed;
-        this.armClaimants[2] = idleAnimationPlaying ? this.idleAnimation : this.unclaimed;
-        this.armClaimants[3] = locomotionWeight > 0.0F ? this.gait : this.standingPose;
-        snapshot.setArmConfiguration(this.resolveArmClaims());
+        snapshot.setArmConfiguration(this.resolveArmClaims(observation));
     }
 
     private void applyFirstObservation(@Nonnull VillagerAnimationObservation observation) {
@@ -418,20 +425,20 @@ public final class VillagerAnimationPipeline {
     }
 
     /**
-     * Crossfades the standing pose into the gait by the locomotion weight and returns that weight.
+     * Crossfades the standing pose into the gait by the locomotion weight.
      */
-    private float applyLocomotion(@Nonnull AnimationPose pose, @Nonnull VillagerAnimationObservation observation) {
+    private void applyLocomotion(@Nonnull AnimationPose pose, @Nonnull VillagerAnimationObservation observation) {
         float locomotionWeight = locomotionWeight(observation.getLimbSwingAmount());
         // At a standstill or a full stride one alternative holds the whole share, so it applies alone
         if (locomotionWeight <= 0.0F) {
             AnimationCompositor.applyContribution(pose, this.suppression, 1.0F, this.standingPose);
-            return locomotionWeight;
+            return;
         }
         BakedAnimation gaitClip = this.registry.baked(this.locomotionLibrary.resolve(observation.getNavigationType()));
         gaitClip.contribute(this.gait, gaitPlaybackTicks(observation.getLimbSwing(), gaitClip.getDurationTicks()));
         if (locomotionWeight >= 1.0F) {
             AnimationCompositor.applyContribution(pose, this.suppression, 1.0F, this.gait);
-            return locomotionWeight;
+            return;
         }
 
         // Both alternatives own the legs, so they crossfade evenly, and the gait's breath suppression scales with it
@@ -440,21 +447,19 @@ public final class VillagerAnimationPipeline {
         this.alternatives[1] = this.gait;
         this.shares[1] = locomotionWeight;
         AnimationCompositor.applyCrossfade(pose, this.suppression, 1.0F, this.alternatives, this.shares, 2);
-        return locomotionWeight;
     }
 
     /**
-     * Applies the scheduled idle animation and returns whether one is playing.
+     * Applies the scheduled idle animation, if one is playing.
      */
-    private boolean applyIdleAnimation(@Nonnull AnimationPose pose, long tick, float partialTicks) {
+    private void applyIdleAnimation(@Nonnull AnimationPose pose, long tick, float partialTicks) {
         BakedAnimation current = this.idleAnimationScheduler.current();
         if (current == null) {
-            return false;
+            return;
         }
         current.contribute(this.idleAnimation, this.idleAnimationScheduler.currentElapsedTicks(tick, partialTicks));
         AnimationCompositor.applyContribution(pose, this.suppression,
                 this.idleAnimationScheduler.weight(tick, partialTicks), this.idleAnimation);
-        return true;
     }
 
     private void applyAction(@Nonnull AnimationPose pose, long tick, float partialTicks) {
@@ -489,31 +494,61 @@ public final class VillagerAnimationPipeline {
         snapshot.setUmbrellaVisible(umbrellaVisible);
         AnimationPose umbrellaPose = snapshot.getUmbrellaPose();
         umbrellaPose.resetToRest();
-        if (!umbrellaVisible) {
-            return;
+        if (umbrellaVisible) {
+            this.umbrellaAnimator.contributeCarry(this.carry, tick, partialTicks);
+            AnimationCompositor.applyContribution(pose, this.suppression, 1.0F, this.carry);
+            this.umbrellaAnimator.sampleCanopyInto(umbrellaPose, tick, partialTicks);
         }
-        this.umbrellaAnimator.contributeCarry(this.carry, tick, partialTicks);
-        AnimationCompositor.applyContribution(pose, this.suppression, 1.0F, this.carry);
-        this.umbrellaAnimator.sampleCanopyInto(umbrellaPose, tick, partialTicks);
+        this.lanternAnimator.contributeCarry(this.lanternCarry, tick, partialTicks);
+        AnimationCompositor.applyContribution(pose, this.suppression, 1.0F, this.lanternCarry);
+        snapshot.setLanternVisible(this.lanternAnimator.isVisible(tick, partialTicks));
     }
 
     /**
-     * Takes each arm's pose from the highest claimant that claims it, defaulting to crossed. Allocates nothing.
+     * Takes each arm's pose from the highest claimant that claims it, defaulting to crossed.
      */
-    private ArmConfiguration resolveArmClaims() {
-        ArmPose left = null;
-        ArmPose right = null;
-        for (AnimationContribution claimant : this.armClaimants) {
-            if (left == null) {
-                left = claimant.getLeftArmClaim();
-            }
-            if (right == null) {
-                right = claimant.getRightArmClaim();
+    private ArmConfiguration resolveArmClaims(@Nonnull VillagerAnimationObservation observation) {
+        return ArmConfiguration.of(this.resolveArmClaim(observation, true), this.resolveArmClaim(observation, false));
+    }
+
+    private ArmPose resolveArmClaim(@Nonnull VillagerAnimationObservation observation, boolean leftArm) {
+        long tick = observation.getAgeTicks();
+        float partialTicks = observation.getPartialTicks();
+        ArmPose claim = this.sleeping
+                ? armClaimAt(this.sleep, Math.max(0.0F, (tick - this.sleepStartTick) + partialTicks), leftArm)
+                : null;
+        if (claim != null) {
+            return claim;
+        }
+
+        // Claims outlive blend weights, so only the current clip and the layer's lifetime choose arm geometry.
+        AnimationLayer layer = this.actionLayer;
+        if (layer != null) {
+            claim = armClaimAt(this.registry.baked(layer.getCurrentAnimation()),
+                    layer.currentElapsedTicks(tick, partialTicks), leftArm);
+            if (claim != null) {
+                return claim;
             }
         }
-        return ArmConfiguration.of(
-                left == null ? ArmPose.CROSSED : left,
-                right == null ? ArmPose.CROSSED : right);
+        BakedAnimation idleClip = this.idleAnimationScheduler.current();
+        if (idleClip != null) {
+            claim = armClaimAt(idleClip, this.idleAnimationScheduler.currentElapsedTicks(tick, partialTicks), leftArm);
+            if (claim != null) {
+                return claim;
+            }
+        }
+        boolean moving = locomotionWeight(observation.getLimbSwingAmount()) > 0.0F;
+        BakedAnimation locomotionClip = this.registry.baked(moving
+                ? this.locomotionLibrary.resolve(observation.getNavigationType())
+                : this.locomotionLibrary.standingPose());
+        claim = armClaimAt(locomotionClip, moving
+                ? gaitPlaybackTicks(observation.getLimbSwing(), locomotionClip.getDurationTicks()) : 0.0F, leftArm);
+        return claim == null ? ArmPose.CROSSED : claim;
+    }
+
+    @Nullable
+    private static ArmPose armClaimAt(@Nonnull BakedAnimation clip, float elapsedTicks, boolean leftArm) {
+        return leftArm ? clip.leftArmClaimAt(elapsedTicks) : clip.rightArmClaimAt(elapsedTicks);
     }
 
     /**

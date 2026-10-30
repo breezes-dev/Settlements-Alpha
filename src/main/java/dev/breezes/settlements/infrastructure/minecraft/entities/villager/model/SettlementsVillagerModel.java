@@ -81,6 +81,7 @@ public class SettlementsVillagerModel
     private final ModelPart arms;
     private final ModelPart arms_crossed;
     private final ModelPart arms_crossed_socket;
+    private final ModelPart lantern_socket;
     private final ModelPart arm_crossed_center_whole;
     private final ModelPart arm_crossed_left;
     private final ModelPart arm_crossed_center_left;
@@ -141,6 +142,7 @@ public class SettlementsVillagerModel
         this.arms = this.torso.getChild("arms");
         this.arms_crossed = this.arms.getChild("arms_crossed");
         this.arms_crossed_socket = this.arms_crossed.getChild("arms_crossed_socket");
+        this.lantern_socket = this.arms_crossed.getChild("lantern_socket");
         this.arm_crossed_center_whole = this.arms_crossed.getChild("arm_crossed_center_whole");
         this.arm_crossed_left = this.arms_crossed.getChild("arm_crossed_left");
         this.arm_crossed_center_left = this.arms_crossed.getChild("arm_crossed_center_left");
@@ -222,6 +224,8 @@ public class SettlementsVillagerModel
         PartDefinition arms_crossed = arms.addOrReplaceChild("arms_crossed", CubeListBuilder.create(), PartPose.offsetAndRotation(0.0F, 0.475F, -1.05F, -0.7854F, 0.0F, 0.0F));
 
         PartDefinition arms_crossed_socket = arms_crossed.addOrReplaceChild("arms_crossed_socket", CubeListBuilder.create(), PartPose.offset(0.0F, 3.7123F, -2.6517F));
+
+        PartDefinition lantern_socket = arms_crossed.addOrReplaceChild("lantern_socket", CubeListBuilder.create(), PartPose.offset(0.0F, 5.9F, 0.0F));
 
         PartDefinition arm_crossed_center_whole = arms_crossed.addOrReplaceChild("arm_crossed_center_whole", CubeListBuilder.create().texOffs(40, 38).addBox(-4.0F, -2.0F, -2.0F, 8.0F, 4.0F, 4.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 4.0F, 0.0F));
 
@@ -314,7 +318,14 @@ public class SettlementsVillagerModel
     public void applyBoneTransform(@Nonnull PoseStack pose, @Nonnull ModelPartRef ref) {
         // The input stack has no model-part transforms, so omitting any ancestor would misplace the bone
         for (ModelPart part : this.chainsByBone[ref.ordinal()]) {
-            part.translateAndRotate(pose);
+            // Reuse quaternion scratch to keep rotated-bone traversal allocation-free
+            pose.translate(part.x / 16.0F, part.y / 16.0F, part.z / 16.0F);
+            if (part.xRot != 0.0F || part.yRot != 0.0F || part.zRot != 0.0F) {
+                pose.mulPose(this.partRotation.rotationZYX(part.zRot, part.yRot, part.xRot));
+            }
+            if (part.xScale != 1.0F || part.yScale != 1.0F || part.zScale != 1.0F) {
+                pose.scale(part.xScale, part.yScale, part.zScale);
+            }
         }
     }
 
@@ -341,6 +352,8 @@ public class SettlementsVillagerModel
             case ARMS -> new ModelPart[]{this.root, this.villager, this.torso, this.arms, this.arms_crossed};
             case ARMS_CROSSED_SOCKET -> new ModelPart[]{this.root, this.villager, this.torso, this.arms,
                     this.arms_crossed, this.arms_crossed_socket};
+            case LANTERN_SOCKET -> new ModelPart[]{this.root, this.villager, this.torso, this.arms,
+                    this.arms_crossed, this.lantern_socket};
             case ARM_STRAIGHT_RIGHT_SOCKET -> new ModelPart[]{this.root, this.villager, this.torso, this.arms,
                     this.arms_straight, this.arm_straight_right, this.arm_straight_right_socket};
             case ARM_STRAIGHT_LEFT_SOCKET -> new ModelPart[]{this.root, this.villager, this.torso, this.arms,

@@ -54,6 +54,13 @@ public final class InMemorySocketRegistry implements SocketRegistry {
                 .localRotation(new Vector3f((float) Math.PI - VANILLA_ARMS_PITCH_RAD, (float) Math.PI, 0.0F))
                 .build();
 
+        Socket lantern = Socket.builder()
+                .id(SocketId.LANTERN)
+                .bone(ModelPartRef.LANTERN_SOCKET)
+                .localTranslation(Vec3.ZERO)
+                .localRotation(new Vector3f())
+                .build();
+
         // Feet socket is available for future ground-contact providers (e.g. particle trails,
         // footstep anchors, sword-riding). No AttachmentSlot is bound here; providers
         // discover it by SocketId.FEET_CENTER when they need it.
@@ -80,6 +87,7 @@ public final class InMemorySocketRegistry implements SocketRegistry {
         return InMemorySocketRegistry.builder()
                 .socketsById(Map.of(
                         SocketId.CROSSED_ARMS_CENTER, armsCenterHold,
+                        SocketId.LANTERN, lantern,
                         SocketId.HAND_RIGHT, handRight,
                         SocketId.HAND_LEFT, handLeft,
                         SocketId.FEET_CENTER, feetCenter,
@@ -91,7 +99,8 @@ public final class InMemorySocketRegistry implements SocketRegistry {
 
     @Override
     public Socket get(@Nonnull SocketId id) {
-        return this.socketsById.getOrDefault(id, Socket.identity(id));
+        Socket socket = this.socketsById.get(id);
+        return socket == null ? Socket.identity(id) : socket;
     }
 
 }

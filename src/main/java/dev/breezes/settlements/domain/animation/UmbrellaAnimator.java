@@ -1,8 +1,5 @@
 package dev.breezes.settlements.domain.animation;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-
 import javax.annotation.Nonnull;
 
 /**
@@ -10,7 +7,6 @@ import javax.annotation.Nonnull;
  * overlapping carry and canopy clips it drives. Only updating changes the state; visibility and sampling are
  * read-only, and successful carry and canopy reads allocate no objects.
  */
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public final class UmbrellaAnimator {
 
     private static final BakedAnimation DEPLOY =
@@ -27,18 +23,19 @@ public final class UmbrellaAnimator {
         RETRACTING
     }
 
-    /**
-     * Ticks a changed gate must persist before committing; 0 commits immediately.
-     */
-    private final int gateDelayTicks;
+    private final DelayedGate gate;
 
     private Direction direction = Direction.RETRACTING;
 
     // Treat retraction as complete at tick 0 so initial visibility needs no separate state
     private long directionStartTick = -UmbrellaCarryAnimations.LOWER_DURATION_TICKS;
 
-    private boolean gateChangePending;
-    private long gateChangeCommitTick;
+    /**
+     * Starts stowed, with a delay before committing each changed gate request; 0 commits immediately.
+     */
+    UmbrellaAnimator(int gateDelayTicks) {
+        this.gate = new DelayedGate(gateDelayTicks, false);
+    }
 
     /**
      * Advances the deploy/stow state machine toward the requested gate value. A direction change commits after the
@@ -49,23 +46,13 @@ public final class UmbrellaAnimator {
      * cause a visible snap.
      */
     public void update(long tick, boolean shouldDeploy) {
+        boolean committedGate = this.gate.update(tick, shouldDeploy);
         boolean currentlyDeploying = this.direction == Direction.DEPLOYING;
-        if (shouldDeploy == currentlyDeploying) {
-            this.gateChangePending = false;
+        if (committedGate == currentlyDeploying) {
             return;
         }
 
-        if (!this.gateChangePending) {
-            this.gateChangePending = true;
-            this.gateChangeCommitTick = tick + this.gateDelayTicks;
-        }
-
-        if (tick < this.gateChangeCommitTick) {
-            return;
-        }
-
-        this.gateChangePending = false;
-        this.direction = shouldDeploy ? Direction.DEPLOYING : Direction.RETRACTING;
+        this.direction = committedGate ? Direction.DEPLOYING : Direction.RETRACTING;
         this.directionStartTick = tick;
     }
 

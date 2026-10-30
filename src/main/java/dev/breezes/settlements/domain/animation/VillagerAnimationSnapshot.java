@@ -29,12 +29,21 @@ public final class VillagerAnimationSnapshot {
      */
     private boolean umbrellaVisible;
 
+    /**
+     * Whether the lantern attachment is drawn.
+     */
+    private boolean lanternVisible;
+
     void setArmConfiguration(@Nonnull ArmConfiguration armConfiguration) {
         this.armConfiguration = armConfiguration;
     }
 
     void setUmbrellaVisible(boolean umbrellaVisible) {
         this.umbrellaVisible = umbrellaVisible;
+    }
+
+    void setLanternVisible(boolean lanternVisible) {
+        this.lanternVisible = lanternVisible;
     }
 
 }

@@ -26,11 +26,14 @@ final class VillagerAnimationObservations {
                                                        AnimationSelectionContext selectionContext,
                                                        boolean sleeping,
                                                        boolean unhappy,
-                                                       boolean umbrellaRequested) {
+                                                       boolean umbrellaRequested,
+                                                       boolean lanternRequested,
+                                                       boolean lanternCheckDecided,
+                                                       boolean handItemShown) {
         VillagerAnimationObservation observation = new VillagerAnimationObservation();
         copy(ageTicks, partialTicks, netHeadYawDegrees, headPitchDegrees, bodyHeadingDegrees, upsideDown, limbSwing,
                 limbSwingAmount, navigationType, motionArchetype, motionGeneration, selectionContext, sleeping, unhappy,
-                umbrellaRequested, observation);
+                umbrellaRequested, lanternRequested, lanternCheckDecided, handItemShown, observation);
         return observation;
     }
 
@@ -42,7 +45,8 @@ final class VillagerAnimationObservations {
                 source.getHeadPitchDegrees(), source.getBodyHeadingDegrees(), source.isUpsideDown(),
                 source.getLimbSwing(), source.getLimbSwingAmount(), source.getNavigationType(),
                 source.getMotionArchetype(), source.getMotionGeneration(), source.getSelectionContext(),
-                source.isSleeping(), source.isUnhappy(), source.isUmbrellaRequested(), target);
+                source.isSleeping(), source.isUnhappy(), source.isUmbrellaRequested(), source.isLanternRequested(),
+                source.isLanternCheckDecided(), source.isHandItemShown(), target);
     }
 
     private static void copy(long ageTicks,
@@ -60,6 +64,9 @@ final class VillagerAnimationObservations {
                              boolean sleeping,
                              boolean unhappy,
                              boolean umbrellaRequested,
+                             boolean lanternRequested,
+                             boolean lanternCheckDecided,
+                             boolean handItemShown,
                              VillagerAnimationObservation target) {
         target.setSampleKey(ageTicks, partialTicks);
         target.setLook(netHeadYawDegrees, headPitchDegrees);
@@ -72,6 +79,9 @@ final class VillagerAnimationObservations {
         target.setSleeping(sleeping);
         target.setUnhappy(unhappy);
         target.setUmbrellaRequested(umbrellaRequested);
+        target.setLanternRequested(lanternRequested);
+        target.setLanternCheckDecided(lanternCheckDecided);
+        target.setHandItemShown(handItemShown);
     }
 
 }

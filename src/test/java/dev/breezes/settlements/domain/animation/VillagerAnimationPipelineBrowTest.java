@@ -330,7 +330,7 @@ class VillagerAnimationPipelineBrowTest {
         BakedAnimationRegistry registry = BakedAnimationRegistry.forVillager(ANIMATION_LIBRARY, IDLE_LIBRARY,
                 ambientLibrary, LOCOMOTION_LIBRARY);
         return new VillagerAnimationPipeline(ANIMATION_LIBRARY, IDLE_LIBRARY, ambientLibrary, LOCOMOTION_LIBRARY,
-                registry, new UmbrellaAnimator(0), new Random(RANDOM_SEED));
+                registry, new UmbrellaAnimator(0), new LanternAnimator(0), new Random(RANDOM_SEED));
     }
 
     private static boolean movesTheBrow(VillagerAnimationSnapshot snapshot) {

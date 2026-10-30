@@ -16,6 +16,11 @@ public final class AttachmentDisplayProfile {
 
     private final Vec3 translation;
     private final Vector3f rotation;
+    /**
+     * Whether the attachment takes only its socket's position, keeping the model root's orientation so it hangs
+     * straight while the bones above the socket rotate.
+     */
+    private final boolean hanging;
     @Builder.Default
     private final float scale = DEFAULT_SCALE;
     @Nullable

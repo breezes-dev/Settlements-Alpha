@@ -10,9 +10,6 @@ class UmbrellaAnimatorTest {
 
     private static final float DELTA = 0.0001F;
     private static final int NO_GATE_DELAY_TICKS = 0;
-    // Short enough to keep the per-tick observation loops below readable; the mechanism does not vary with the magnitude.
-    private static final int GATE_DELAY_TICKS = 8;
-
     private static final int ARMS_CROSSED = VillagerAnimationRig.RIG.indexOf(AnimationTargets.ARMS_CROSSED_ROTATION);
     private static final int EAST = UmbrellaAnimationTargets.RIG.indexOf(UmbrellaAnimationTargets.EAST_ROTATION);
 
@@ -136,99 +133,6 @@ class UmbrellaAnimatorTest {
         assertEquals(armAfterFirst, carryArmPitch(animator, tick, partialTicks));
         assertEquals(eastAfterFirst, canopyEastRoll(animator, tick, partialTicks));
         assertEquals(visibleAfterFirst, animator.isVisible(tick, partialTicks));
-    }
-
-    @Test
-    void update_holdsAGateChangeUntilTheGateDelayElapses() {
-        // Arrange
-        UmbrellaAnimator animator = new UmbrellaAnimator(GATE_DELAY_TICKS);
-
-        // Act, Assert: the gate opens at tick 0 and stays open, and nothing moves until the whole delay
-        // has been spent standing on it.
-        for (long tick = 0; tick < GATE_DELAY_TICKS; tick++) {
-            animator.update(tick, true);
-            assertFalse(animator.isVisible(tick, 0.0F),
-                    "expected the raise to still be held at tick " + tick + " of the gate delay");
-        }
-
-        animator.update(GATE_DELAY_TICKS, true);
-        assertTrue(animator.isVisible(GATE_DELAY_TICKS, 0.0F),
-                "expected the raise to commit on the tick the gate delay ran out");
-    }
-
-    @Test
-    void update_delaysTheLowerAsWellAsTheRaise() {
-        // Arrange: raise fully and hold, so the lower starts from a settled pose rather than a reversal.
-        UmbrellaAnimator animator = new UmbrellaAnimator(GATE_DELAY_TICKS);
-        updateThrough(animator, 0L, GATE_DELAY_TICKS, true);
-        long fullyDeployedTick = GATE_DELAY_TICKS + UmbrellaCarryAnimations.RAISE_DURATION_TICKS + 100L;
-
-        // Act: the gate shuts from a fully-deployed hold.
-        long undelayedStowTick = fullyDeployedTick + UmbrellaCarryAnimations.LOWER_DURATION_TICKS;
-        updateThrough(animator, fullyDeployedTick, undelayedStowTick, false);
-
-        // Assert: still up at the tick an undelayed lower would already have finished stowing...
-        assertTrue(animator.isVisible(undelayedStowTick, 0.0F),
-                "expected the lower to wait out the gate delay before it starts travelling");
-
-        // ...and gone exactly one gate delay later than that.
-        long delayedStowTick = undelayedStowTick + GATE_DELAY_TICKS;
-        updateThrough(animator, undelayedStowTick, delayedStowTick, false);
-        assertFalse(animator.isVisible(delayedStowTick, 0.0F),
-                "expected the lower to finish a full gate delay behind an undelayed one");
-    }
-
-    @Test
-    void update_abandonsAGateChangeWhenTheGateReturnsBeforeTheDelayElapses() {
-        // Arrange: a gate that opens and shuts again well inside the delay window -- the flicker the
-        // delay exists to swallow.
-        UmbrellaAnimator animator = new UmbrellaAnimator(GATE_DELAY_TICKS);
-        long blipEndTick = GATE_DELAY_TICKS / 2;
-        updateThrough(animator, 0L, blipEndTick - 1, true);
-
-        // Act
-        updateThrough(animator, blipEndTick, GATE_DELAY_TICKS, false);
-
-        // Assert: the umbrella never appears, including on the tick the abandoned change would have
-        // committed had it survived.
-        assertFalse(animator.isVisible(GATE_DELAY_TICKS, 0.0F),
-                "expected a gate blip shorter than the delay to leave the umbrella stowed");
-    }
-
-    @Test
-    void update_restartsTheGateDelayAfterAnAbandonedChange() {
-        // Arrange: burn all but one tick of a delay window, then abandon it. A partly spent window that
-        // survived would let a gate flickering on this cadence eventually commit on a very short run.
-        UmbrellaAnimator animator = new UmbrellaAnimator(GATE_DELAY_TICKS);
-        long abandonTick = GATE_DELAY_TICKS - 1;
-        updateThrough(animator, 0L, abandonTick - 1, true);
-        animator.update(abandonTick, false);
-
-        // Act: the gate opens again on the very next tick.
-        long reopenTick = abandonTick + 1;
-        long recommitTick = reopenTick + GATE_DELAY_TICKS;
-        updateThrough(animator, reopenTick, recommitTick - 1, true);
-
-        // Assert: it waited out a whole fresh window rather than finishing the leftover one.
-        assertFalse(animator.isVisible(recommitTick - 1, 0.0F),
-                "expected the abandoned window to be discarded rather than resumed");
-        animator.update(recommitTick, true);
-        assertTrue(animator.isVisible(recommitTick, 0.0F),
-                "expected the reopened gate to commit a full delay after it reopened");
-    }
-
-    /**
-     * Feeds one update per tick over the inclusive range, as a render pass observing every frame
-     * does. A state machine driven by a delay only sees the tick it is handed, so a test that skips
-     * ticks tests a cadence the renderer never produces.
-     */
-    private static void updateThrough(UmbrellaAnimator animator,
-                                      long fromTick,
-                                      long toTick,
-                                      boolean shouldDeploy) {
-        for (long tick = fromTick; tick <= toTick; tick++) {
-            animator.update(tick, shouldDeploy);
-        }
     }
 
     private static float carryArmPitch(UmbrellaAnimator animator, long tick) {

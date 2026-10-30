@@ -42,20 +42,12 @@ public abstract class ProfessionCatalogDataManager<T> extends CodecJsonDataManag
         }
 
         this.byProfession = Collections.unmodifiableMap(immutable);
-        this.onCatalogReloaded(this.byProfession);
     }
 
     /**
      * Extracts the stable id used to de-duplicate values within a profession across files.
      */
     protected abstract String idOf(T value);
-
-    /**
-     * Hook for subclasses that build derived projections (e.g. offer/demand/supply views) on top of
-     * the merged catalog. No-op by default.
-     */
-    protected void onCatalogReloaded(@Nonnull Map<VillagerProfessionKey, List<T>> byProfession) {
-    }
 
     protected final List<T> valuesFor(@Nonnull VillagerProfessionKey profession) {
         return this.byProfession.getOrDefault(profession, List.of());

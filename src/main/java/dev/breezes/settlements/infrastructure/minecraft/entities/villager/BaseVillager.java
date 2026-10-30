@@ -44,10 +44,10 @@ import dev.breezes.settlements.domain.ai.navigation.NavigationType;
 import dev.breezes.settlements.domain.ai.planning.DayPlan;
 import dev.breezes.settlements.domain.animation.AnimationArchetype;
 import dev.breezes.settlements.domain.animation.VillagerAnimator;
-import dev.breezes.settlements.domain.common.DebouncedSignal;
 import dev.breezes.settlements.domain.economy.catalog.ItemMatch;
 import dev.breezes.settlements.domain.entities.Expertise;
 import dev.breezes.settlements.domain.entities.ISettlementsVillager;
+import dev.breezes.settlements.domain.entities.OwnedLanternType;
 import dev.breezes.settlements.domain.entities.VillagerProfessionKey;
 import dev.breezes.settlements.domain.entities.hunger.IVillagerHunger;
 import dev.breezes.settlements.domain.genetics.GeneticsProfile;
@@ -66,7 +66,6 @@ import dev.breezes.settlements.infrastructure.minecraft.attachments.VillagerOrig
 import dev.breezes.settlements.infrastructure.minecraft.attachments.VillagerPersonaLineageAttachment;
 import dev.breezes.settlements.infrastructure.minecraft.behavior.planning.PlanRunnerBehavior;
 import dev.breezes.settlements.infrastructure.minecraft.entities.villager.genetics.VillagerGeneticAttributes;
-import dev.breezes.settlements.infrastructure.minecraft.mixins.EntityMixin;
 import dev.breezes.settlements.infrastructure.minecraft.mixins.VillagerMixin;
 import dev.breezes.settlements.infrastructure.minecraft.navigation.SettlementsGroundPathNavigation;
 import dev.breezes.settlements.infrastructure.minecraft.navigation.VanillaMemoryNavigationManager;
@@ -76,6 +75,7 @@ import dev.breezes.settlements.shared.annotations.functional.ClientSide;
 import dev.breezes.settlements.shared.annotations.functional.ServerSide;
 import dev.breezes.settlements.shared.logging.LogCategory;
 import dev.breezes.settlements.shared.util.SyncedDataWrapper;
+import lombok.AccessLevel;
 import lombok.CustomLog;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -155,10 +155,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     // Short against the minutes a villager spends at MEET, so a member that reaches its bell is checked in while it
     // stands there, between the strolls that take it out of check-in range
     private static final ClockTicks CHECK_IN_COOLDOWN_TICKS = ClockTicks.seconds(5);
-
-    // Rain exposure is sampled coarsely with debouncing
-    private static final ClockTicks RAIN_EXPOSURE_SAMPLE_COOLDOWN_TICKS = ClockTicks.seconds(1);
-    private static final int RAIN_EXPOSURE_OBSERVATIONS_TO_CHANGE = 2;
+    private static final ClockTicks OWNED_LANTERN_SAMPLE_COOLDOWN_TICKS = ClockTicks.seconds(5);
 
     private static final SyncedDataWrapper<Byte> DATA_MOTION_ARCHETYPE = SyncedDataWrapper.<Byte>builder()
             .entityClass(BaseVillager.class)
@@ -185,10 +182,10 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             .serializer(EntityDataSerializers.BOOLEAN)
             .defaultValue(false)
             .build();
-    private static final SyncedDataWrapper<Boolean> DATA_EXPOSED_TO_RAIN = SyncedDataWrapper.<Boolean>builder()
+    private static final SyncedDataWrapper<Byte> DATA_OWNED_LANTERN_TYPE = SyncedDataWrapper.<Byte>builder()
             .entityClass(BaseVillager.class)
-            .serializer(EntityDataSerializers.BOOLEAN)
-            .defaultValue(false)
+            .serializer(EntityDataSerializers.BYTE)
+            .defaultValue(OwnedLanternType.NONE.toNetworkByte())
             .build();
 
     private final IVillagerBrain settlementsBrain;
@@ -221,14 +218,15 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
      * which is fine since it only ever plays for the ~1 second following a live {@link #restock()} call.
      */
     private final RestockReaction restockReaction;
+    @Getter(AccessLevel.NONE)
+    private final CarriedPropConditions carriedPropConditions;
 
     private final ITickable reconcilerCooldown;
     private final ITickable perceptionCooldown;
     private final ITickable nameSyncCooldown;
     private final ITickable membershipCheckCooldown;
     private final ITickable checkInCooldown;
-    private final ITickable rainExposureCooldown;
-    private final DebouncedSignal rainExposure;
+    private final ITickable ownedLanternSampleCooldown;
     @Nullable
     private String lastPublishedName;
     private long sootyExpiresAtGameTime;
@@ -252,14 +250,14 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         this.bubbleState = new VillagerBubbleState();
         this.hungerDrainTimer = null;
         this.restockReaction = new RestockReaction();
+        this.carriedPropConditions = new CarriedPropConditions();
 
         this.reconcilerCooldown = Tickable.staggered(RECONCILER_COOLDOWN_TICKS);
         this.perceptionCooldown = Tickable.staggered(PERCEPTION_COOLDOWN_TICKS);
         this.nameSyncCooldown = Tickable.staggered(NAME_SYNC_COOLDOWN_TICKS);
         this.membershipCheckCooldown = Tickable.staggered(MEMBERSHIP_CHECK_COOLDOWN_TICKS);
         this.checkInCooldown = Tickable.staggered(CHECK_IN_COOLDOWN_TICKS);
-        this.rainExposureCooldown = Tickable.staggered(RAIN_EXPOSURE_SAMPLE_COOLDOWN_TICKS);
-        this.rainExposure = new DebouncedSignal(false, RAIN_EXPOSURE_OBSERVATIONS_TO_CHANGE);
+        this.ownedLanternSampleCooldown = Tickable.staggered(OWNED_LANTERN_SAMPLE_COOLDOWN_TICKS);
         this.sootyExpiresAtGameTime = 0L;
     }
 
@@ -293,7 +291,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         DATA_LOCOMOTION_NAVIGATION_TYPE.define(builder);
         DATA_BOBBER_DEPLOYED.define(builder);
         DATA_SOOTY.define(builder);
-        DATA_EXPOSED_TO_RAIN.define(builder);
+        DATA_OWNED_LANTERN_TYPE.define(builder);
     }
 
     /**
@@ -371,8 +369,36 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         return DATA_SOOTY.get(this.entityData);
     }
 
-    public boolean isExposedToRain() {
-        return DATA_EXPOSED_TO_RAIN.get(this.entityData);
+    /**
+     * Whether rain asks this villager to carry its umbrella; false on the server and before its first client tick.
+     */
+    @ClientSide
+    public boolean isUmbrellaRequested() {
+        return this.carriedPropConditions.isUmbrellaRequested();
+    }
+
+    /**
+     * Whether darkness and sky exposure ask this villager to carry its owned lantern;
+     * false on the server and before its first client tick.
+     */
+    @ClientSide
+    public boolean isLanternRequested() {
+        return this.carriedPropConditions.isLanternRequested();
+    }
+
+    /**
+     * Whether this villager's lantern conditions have been sampled on the client; false on the server.
+     */
+    @ClientSide
+    public boolean isLanternCheckDecided() {
+        return this.carriedPropConditions.isLanternCheckDecided();
+    }
+
+    /**
+     * Returns the sampled owned lantern on either logical side, defaulting to NONE before the first server sample.
+     */
+    public OwnedLanternType getOwnedLanternType() {
+        return OwnedLanternType.fromNetworkByte(DATA_OWNED_LANTERN_TYPE.get(this.entityData));
     }
 
     /**
@@ -625,11 +651,12 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             // Server side
             this.tickHunger();
             this.tickSooty();
-            this.tickRainExposure();
+            this.tickOwnedLantern();
             this.bubbleService().tick(this, this.level().getGameTime());
         } else {
             // Client side
             this.restockReaction.tickClient(this);
+            this.carriedPropConditions.tickClient(this);
         }
     }
 
@@ -652,18 +679,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         super.handleEntityEvent(id);
     }
 
-    /**
-     * Samples whether rain is falling on this villager and publishes the debounced answer.
-     */
-    private void tickRainExposure() {
-        if (!this.rainExposureCooldown.tickCheckAndReset(1)) {
-            return;
-        }
-
-        boolean inRain = ((EntityMixin) this).invokeIsInRain() && !this.isUnderWater();
-        DATA_EXPOSED_TO_RAIN.set(this.entityData, this.rainExposure.observe(inRain));
-    }
-
     private void tickSooty() {
         if (!DATA_SOOTY.get(this.entityData)) {
             return;
@@ -675,6 +690,24 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
 
         this.sootyExpiresAtGameTime = 0L;
         DATA_SOOTY.set(this.entityData, false);
+    }
+
+    @ServerSide
+    private void tickOwnedLantern() {
+        if (!this.ownedLanternSampleCooldown.tickCheckAndReset(1)) {
+            return;
+        }
+
+        OwnedLanternType ownedLanternType = OwnedLanternType.NONE;
+        if (this.hasSettlementsInventory()) {
+            VillagerInventory inventory = this.getSettlementsInventory();
+            if (inventory.count(Items.SOUL_LANTERN) > 0) {
+                ownedLanternType = OwnedLanternType.SOUL_LANTERN;
+            } else if (inventory.count(Items.LANTERN) > 0) {
+                ownedLanternType = OwnedLanternType.LANTERN;
+            }
+        }
+        DATA_OWNED_LANTERN_TYPE.set(this.entityData, ownedLanternType.toNetworkByte());
     }
 
     @Override

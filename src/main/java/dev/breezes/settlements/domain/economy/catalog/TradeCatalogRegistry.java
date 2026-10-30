@@ -5,6 +5,11 @@ import dev.breezes.settlements.domain.entities.VillagerProfessionKey;
 import javax.annotation.Nonnull;
 import java.util.List;
 
+/**
+ * Each profession's stock policies, and the entries projected from them. A profession's policies include the policies
+ * every profession shares, beneath its own: its own policy replaces a shared policy with the same id, and a profession
+ * with no catalog of its own has the shared policies alone.
+ */
 public interface TradeCatalogRegistry {
 
     /**

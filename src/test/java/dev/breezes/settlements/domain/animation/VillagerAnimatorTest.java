@@ -197,7 +197,8 @@ class VillagerAnimatorTest {
 
     private static VillagerAnimator animator() {
         return new VillagerAnimator(new VillagerAnimationPipeline(ANIMATION_LIBRARY, IDLE_LIBRARY, AMBIENT_LIBRARY,
-                LOCOMOTION_LIBRARY, REGISTRY, new UmbrellaAnimator(NO_GATE_DELAY_TICKS), new Random(RANDOM_SEED)));
+                LOCOMOTION_LIBRARY, REGISTRY, new UmbrellaAnimator(NO_GATE_DELAY_TICKS),
+                new LanternAnimator(NO_GATE_DELAY_TICKS), new Random(RANDOM_SEED)));
     }
 
     private static VillagerAnimationSnapshot advance(VillagerAnimator animator,

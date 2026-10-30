@@ -37,6 +37,14 @@
         { "match": { "item": "minecraft:iron_ingot" }, "count": 3 }
       ],
       "output": { "item": "minecraft:bucket", "count": 1 }
+    },
+    {
+      "id": "lantern",
+      "inputs": [
+        { "match": { "item": "minecraft:iron_nugget" }, "count": 4 },
+        { "match": { "item": "minecraft:coal" }, "count": 1 }
+      ],
+      "output": { "item": "minecraft:lantern", "count": 4 }
     }
   ]
 }

@@ -1,5 +1,6 @@
 package dev.breezes.settlements.domain.animation;
 
+import dev.breezes.settlements.domain.attachment.LanternSlot;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
@@ -116,6 +117,37 @@ class ProductionClipCompositionTest {
         // Assert: its upward glance and raised brow are authored
         assertEquals(1.0F, contribution.suppression(SuppressibleComponent.GAZE), 0.0F);
         assertEquals(1.0F, contribution.suppression(SuppressibleComponent.BROW), 0.0F);
+    }
+
+    @Test
+    void everyGait_keysTheLanternRotation_andTheStandingPoseDoesNot() throws Exception {
+        // Arrange: a gait without a swing freezes the lantern while walking, and a standing pose that keys it
+        // leaves the lantern swinging at a standstill
+        Set<ResourceLocation> gaits = gaitIds();
+        AnimationTarget<?> lanternRotation = SlotTargets.rotation(LanternSlot.LANTERN);
+        int gaitsChecked = 0;
+
+        for (KeyframeAnimation clip : villagerClips()) {
+            if (!gaits.contains(clip.getId())) {
+                continue;
+            }
+            gaitsChecked++;
+
+            // Act, Assert
+            assertTrue(keysTarget(clip, lanternRotation), clip.getId() + " must swing the lantern");
+        }
+        assertEquals(gaits.size(), gaitsChecked, "Discovery found fewer villager clips than gaits");
+        assertFalse(keysTarget(LocomotionAnimations.standingPose(), lanternRotation),
+                "The standing pose must leave the lantern unkeyed so the swing fades with the stride");
+    }
+
+    private static boolean keysTarget(KeyframeAnimation clip, AnimationTarget<?> target) {
+        for (AnimationTrack<?> track : clip.getTracks()) {
+            if (track.getTarget().equals(target)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static List<KeyframeAnimation> villagerClips() throws Exception {

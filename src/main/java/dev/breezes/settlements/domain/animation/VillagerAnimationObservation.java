@@ -95,6 +95,24 @@ public final class VillagerAnimationObservation {
     private boolean umbrellaRequested;
 
     /**
+     * Whether the carried-prop conditions ask for the lantern, regardless of sleep.
+     */
+    @Setter
+    private boolean lanternRequested;
+
+    /**
+     * Whether the client has sampled the lantern conditions at least once.
+     */
+    @Setter
+    private boolean lanternCheckDecided;
+
+    /**
+     * Whether either hand displays an item.
+     */
+    @Setter
+    private boolean handItemShown;
+
+    /**
      * Sets the sample key, clamping partial ticks to [0, 1] and treating NaN as zero.
      */
     public void setSampleKey(long ageTicks, float partialTicks) {

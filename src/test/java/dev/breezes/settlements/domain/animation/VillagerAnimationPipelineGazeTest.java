@@ -209,7 +209,7 @@ class VillagerAnimationPipelineGazeTest {
 
     private static VillagerAnimationPipeline pipeline() {
         return new VillagerAnimationPipeline(ANIMATION_LIBRARY, IDLE_LIBRARY, AMBIENT_LIBRARY, LOCOMOTION_LIBRARY,
-                REGISTRY, new UmbrellaAnimator(0), new Random(RANDOM_SEED));
+                REGISTRY, new UmbrellaAnimator(0), new LanternAnimator(0), new Random(RANDOM_SEED));
     }
 
     private static TrackAnimationBuilder headHold(String name) {

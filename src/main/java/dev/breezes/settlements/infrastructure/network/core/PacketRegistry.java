@@ -31,10 +31,10 @@ import javax.annotation.Nonnull;
 public class PacketRegistry {
 
     /**
-     * Wire-format version of all Settlements payloads and synced attachments.
+     * Wire-format version of all Settlements payloads, synced attachments, and synced entity data.
      * Prevents clients from joining servers compiled with a different version.
      */
-    private static final String NETWORK_VERSION = "4";
+    private static final String NETWORK_VERSION = "5";
 
     public static void bindPacketHandlers(@Nonnull RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(NETWORK_VERSION).optional();

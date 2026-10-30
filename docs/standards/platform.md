@@ -203,6 +203,10 @@ payload's codec writes or reads, and whenever a payload is added or removed. Our
 NeoForge keeps, so ours is the only guard on their format: bump it when what an attachment's sync handler writes or
 reads changes.
 
+Synced entity data counts too: vanilla assigns accessor ids in definition order, so differing definitions can assign
+values to the wrong fields, throw on a serializer mismatch, or index beyond the client's data array. NeoForge never
+negotiates those definitions; bump the version when they change.
+
 `RegisterPayloadHandlersEvent#registrar(String)` takes that version, not a namespace. Passing the mod id, which reads
 naturally there, keeps the check wired up while making every pair of builds pass it.
 

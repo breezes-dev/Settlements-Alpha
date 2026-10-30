@@ -4,6 +4,7 @@ import dev.breezes.settlements.domain.animation.VillagerAnimationSnapshot;
 import dev.breezes.settlements.domain.attachment.AttachmentContent;
 import dev.breezes.settlements.domain.attachment.AttachmentProvider;
 import dev.breezes.settlements.domain.attachment.RenderableAttachment;
+import dev.breezes.settlements.domain.entities.OwnedLanternType;
 import dev.breezes.settlements.domain.inventory.EquipmentSlot;
 import dev.breezes.settlements.domain.inventory.IVillagerEquipment;
 import dev.breezes.settlements.domain.presentation.ItemCategory;
@@ -12,6 +13,8 @@ import dev.breezes.settlements.infrastructure.minecraft.entities.villager.BaseVi
 import jakarta.inject.Inject;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -40,11 +43,25 @@ public final class EquipmentAttachmentProvider implements AttachmentProvider {
     private static void addAttachment(@Nonnull IVillagerEquipment equipment,
                                       @Nonnull List<RenderableAttachment> attachments,
                                       @Nonnull EquipmentSlot slot) {
-        equipment.getEquipped(slot).ifPresent(stack -> attachments.add(RenderableAttachment.builder()
-                .slot(slot)
-                .content(new AttachmentContent.ItemContent(stack))
-                .category(ItemCategory.of(stack))
-                .build()));
+        equipment.getEquipped(slot).ifPresent(stack -> {
+            ItemCategory category = ItemCategory.of(stack);
+            attachments.add(RenderableAttachment.builder()
+                    .slot(slot)
+                    .content(contentFor(stack, slot, category))
+                    .category(category)
+                    .build());
+        });
+    }
+
+    private static AttachmentContent contentFor(@Nonnull ItemStack stack,
+                                                @Nonnull EquipmentSlot slot,
+                                                @Nonnull ItemCategory category) {
+        if (slot == EquipmentSlot.MAIN_HAND && category == ItemCategory.LANTERN) {
+            return LanternAttachmentContents.forType(stack.is(Items.SOUL_LANTERN)
+                    ? OwnedLanternType.SOUL_LANTERN : OwnedLanternType.LANTERN);
+        }
+
+        return new AttachmentContent.ItemContent(stack);
     }
 
 }

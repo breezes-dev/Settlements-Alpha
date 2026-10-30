@@ -2,17 +2,6 @@
   "profession": "minecraft:fletcher",
   "stock": [
     {
-      "id": "food",
-      "match": {
-        "tag": "c:foods"
-      },
-      "restock": {
-        "below": 32,
-        "buyPricePerUnit": 1,
-        "priority": 100
-      }
-    },
-    {
       "id": "feather",
       "match": {
         "item": "minecraft:feather"

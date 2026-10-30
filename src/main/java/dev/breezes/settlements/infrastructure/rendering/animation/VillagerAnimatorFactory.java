@@ -5,6 +5,7 @@ import dev.breezes.settlements.domain.animation.AmbientAnimationLibrary;
 import dev.breezes.settlements.domain.animation.AnimationLibrary;
 import dev.breezes.settlements.domain.animation.BakedAnimationRegistry;
 import dev.breezes.settlements.domain.animation.IdleAnimationLibrary;
+import dev.breezes.settlements.domain.animation.LanternAnimator;
 import dev.breezes.settlements.domain.animation.LocomotionAnimationLibrary;
 import dev.breezes.settlements.domain.animation.UmbrellaAnimatorFactory;
 import dev.breezes.settlements.domain.animation.VillagerAnimationPipeline;
@@ -39,6 +40,7 @@ public final class VillagerAnimatorFactory {
                 this.locomotionAnimationLibrary,
                 this.bakedAnimationRegistry,
                 this.umbrellaAnimatorFactory.create(),
+                LanternAnimator.create(RandomUtil.RANDOM),
                 RandomUtil.RANDOM));
     }
 

@@ -1,6 +1,7 @@
 package dev.breezes.settlements.domain.animation;
 
 import dev.breezes.settlements.domain.attachment.AttachmentSlot;
+import dev.breezes.settlements.domain.attachment.LanternSlot;
 import dev.breezes.settlements.domain.attachment.UmbrellaSlot;
 import dev.breezes.settlements.domain.inventory.EquipmentSlot;
 import lombok.AccessLevel;
@@ -155,6 +156,7 @@ public final class VillagerAnimationRig {
                 AnimationTargets.MOUTH_TRANSLATION,
                 AnimationTargets.MOUTH_SCALE));
         addSlotChannels(channels, UmbrellaSlot.values());
+        addSlotChannels(channels, LanternSlot.values());
         addSlotChannels(channels, EquipmentSlot.values());
         return channels;
     }

@@ -120,6 +120,44 @@ class VillagerAnimationPipelineTest {
     }
 
     @Test
+    void lantern_isHiddenWhileSleeping_evenWhenRequested() {
+        // Arrange
+        VillagerAnimationPipeline pipeline = pipeline();
+        VillagerAnimationSnapshot snapshot = new VillagerAnimationSnapshot();
+        snapshot.setLanternVisible(true);
+        VillagerAnimationObservation observation = lookingAside(LONG_LIVED_AGE_TICKS)
+                .lanternRequested(true)
+                .lanternCheckDecided(true)
+                .sleeping(true)
+                .build();
+
+        // Act
+        pipeline.advance(observation, snapshot);
+
+        // Assert
+        assertFalse(snapshot.isLanternVisible());
+    }
+
+    @Test
+    void lantern_isHiddenWhenNotRequested_evenWhenSnapshotWasVisible() {
+        // Arrange
+        VillagerAnimationPipeline pipeline = pipeline();
+        VillagerAnimationSnapshot snapshot = new VillagerAnimationSnapshot();
+        snapshot.setLanternVisible(true);
+        VillagerAnimationObservation observation = lookingAside(LONG_LIVED_AGE_TICKS)
+                .lanternRequested(false)
+                .lanternCheckDecided(true)
+                .sleeping(false)
+                .build();
+
+        // Act
+        pipeline.advance(observation, snapshot);
+
+        // Assert
+        assertFalse(snapshot.isLanternVisible());
+    }
+
+    @Test
     void idleAnimation_startsOnlyAfterAFreshWait_countedFromTheFirstObservation() {
         // Arrange
         VillagerAnimationPipeline pipeline = pipeline();
@@ -278,7 +316,7 @@ class VillagerAnimationPipelineTest {
         VillagerAnimationPipeline drawsZero = pipeline();
         VillagerAnimationPipeline drawsPhase = new VillagerAnimationPipeline(ANIMATION_LIBRARY, IDLE_LIBRARY,
                 AMBIENT_LIBRARY, LOCOMOTION, REGISTRY, new UmbrellaAnimator(NO_GATE_DELAY_TICKS),
-                new FixedRandom(drawnPhase));
+                new LanternAnimator(NO_GATE_DELAY_TICKS), new FixedRandom(drawnPhase));
         VillagerAnimationSnapshot zeroSnapshot = new VillagerAnimationSnapshot();
         VillagerAnimationSnapshot phaseSnapshot = new VillagerAnimationSnapshot();
         int cycleTicks = AMBIENT_LIBRARY.breathingCycle().getDurationTicks();
@@ -1061,7 +1099,7 @@ class VillagerAnimationPipelineTest {
 
     private static VillagerAnimationPipeline pipeline() {
         return new VillagerAnimationPipeline(ANIMATION_LIBRARY, IDLE_LIBRARY, AMBIENT_LIBRARY, LOCOMOTION, REGISTRY,
-                new UmbrellaAnimator(NO_GATE_DELAY_TICKS), new FixedRandom());
+                new UmbrellaAnimator(NO_GATE_DELAY_TICKS), new LanternAnimator(NO_GATE_DELAY_TICKS), new FixedRandom());
     }
 
     private static final class FixedRandom extends Random {
@@ -1242,6 +1280,7 @@ class VillagerAnimationPipelineTest {
                                                           AnimationMask... excluded) {
         assertEquals(expected.getArmConfiguration(), actual.getArmConfiguration());
         assertEquals(expected.isUmbrellaVisible(), actual.isUmbrellaVisible());
+        assertEquals(expected.isLanternVisible(), actual.isLanternVisible());
         for (int channel = 0; channel < RIG.getChannelCount(); channel++) {
             if (inAny(excluded, channel)) {
                 continue;
@@ -1272,6 +1311,7 @@ class VillagerAnimationPipelineTest {
     private static void assertSameSnapshot(VillagerAnimationSnapshot expected, VillagerAnimationSnapshot actual) {
         assertEquals(expected.getArmConfiguration(), actual.getArmConfiguration());
         assertEquals(expected.isUmbrellaVisible(), actual.isUmbrellaVisible());
+        assertEquals(expected.isLanternVisible(), actual.isLanternVisible());
         assertSamePose(expected.getPose(), actual.getPose());
         assertSamePose(expected.getUmbrellaPose(), actual.getUmbrellaPose());
     }

@@ -2,17 +2,6 @@
   "profession": "minecraft:leatherworker",
   "stock": [
     {
-      "id": "food",
-      "match": {
-        "tag": "c:foods"
-      },
-      "restock": {
-        "below": 32,
-        "buyPricePerUnit": 1,
-        "priority": 100
-      }
-    },
-    {
       "id": "leather",
       "match": {
         "item": "minecraft:leather"
@@ -190,17 +179,6 @@
       },
       "dump": {
         "above": 16
-      }
-    },
-    {
-      "id": "ballista_bolt",
-      "match": {
-        "item": "settlements:ballista_bolt"
-      },
-      "restock": {
-        "below": 16,
-        "buyPricePerUnit": 1,
-        "priority": 20
       }
     }
   ]

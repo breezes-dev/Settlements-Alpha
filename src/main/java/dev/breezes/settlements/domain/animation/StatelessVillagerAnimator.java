@@ -19,7 +19,7 @@ public final class StatelessVillagerAnimator {
     /**
      * Overwrites the snapshot with the observed look without smoothing, with yaw bounded by
      * {@link HeadTrail#MAX_DISPLAYED_YAW_RADIANS}. Adds the head shake at full weight when unhappy, resets every other
-     * pose channel to rest, crosses both arms, and hides the umbrella.
+     * pose channel to rest, crosses both arms, and hides carried props.
      */
     public void evaluate(@Nonnull VillagerAnimationObservation observation,
                          @Nonnull VillagerAnimationSnapshot snapshot) {
@@ -32,6 +32,7 @@ public final class StatelessVillagerAnimator {
 
         snapshot.setArmConfiguration(ArmConfiguration.BOTH_CROSSED);
         snapshot.setUmbrellaVisible(false);
+        snapshot.setLanternVisible(false);
         snapshot.getUmbrellaPose().resetToRest();
     }
 

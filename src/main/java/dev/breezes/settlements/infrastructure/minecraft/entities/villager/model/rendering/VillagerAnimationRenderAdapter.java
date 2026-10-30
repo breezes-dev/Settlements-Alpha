@@ -15,6 +15,7 @@ import dev.breezes.settlements.infrastructure.minecraft.entities.villager.model.
 import dev.breezes.settlements.infrastructure.rendering.animation.ObservationalVillagerRenderFlag;
 import dev.breezes.settlements.shared.annotations.functional.ClientSide;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -75,9 +76,13 @@ public final class VillagerAnimationRenderAdapter implements SettlementsVillager
         observation.setSampleKey(villager.tickCount, partialTicks);
         observation.setNavigationType(villager.getLocomotionNavigationType());
         observation.setMotion(villager.getMotion(), villager.getMotionGeneration());
-        observation.setSelectionContext(AnimationSelectionContext.of(
-                ItemCategory.of(EquipmentLookup.findEquippedOrEmpty(villager, EquipmentSlot.MAIN_HAND))));
-        observation.setUmbrellaRequested(villager.isExposedToRain());
+        ItemStack mainHandItem = EquipmentLookup.findEquippedOrEmpty(villager, EquipmentSlot.MAIN_HAND);
+        ItemStack offHandItem = EquipmentLookup.findEquippedOrEmpty(villager, EquipmentSlot.OFF_HAND);
+        observation.setSelectionContext(AnimationSelectionContext.of(ItemCategory.of(mainHandItem)));
+        observation.setHandItemShown(!mainHandItem.isEmpty() || !offHandItem.isEmpty());
+        observation.setUmbrellaRequested(villager.isUmbrellaRequested());
+        observation.setLanternRequested(villager.isLanternRequested());
+        observation.setLanternCheckDecided(villager.isLanternCheckDecided());
         observation.setSleeping(villager.isSleeping());
         observation.setUnhappy(villager.getUnhappyCounter() > 0);
         observation.setUpsideDown(LivingEntityRenderer.isEntityUpsideDown(villager));

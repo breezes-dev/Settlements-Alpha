@@ -29,6 +29,7 @@ For settling a placement or magnitude in a running game, see
 | Arm geometry | [ArmConfiguration](../../src/main/java/dev/breezes/settlements/domain/presentation/ArmConfiguration.java), [VillagerAnimationPipeline](../../src/main/java/dev/breezes/settlements/domain/animation/VillagerAnimationPipeline.java), [SettlementsVillagerModel](../../src/main/java/dev/breezes/settlements/infrastructure/minecraft/entities/villager/model/SettlementsVillagerModel.java) |
 | Items, props, or sockets | [AttachmentProvider](../../src/main/java/dev/breezes/settlements/domain/attachment/AttachmentProvider.java), [Socket](../../src/main/java/dev/breezes/settlements/domain/presentation/Socket.java), [AttachmentRenderLayer](../../src/main/java/dev/breezes/settlements/infrastructure/minecraft/entities/villager/model/rendering/AttachmentRenderLayer.java) |
 | Umbrella carry, deploy, or the rain gate | [UmbrellaAnimator](../../src/main/java/dev/breezes/settlements/domain/animation/UmbrellaAnimator.java), [UmbrellaCarryAnimations](../../src/main/java/dev/breezes/settlements/domain/animation/UmbrellaCarryAnimations.java), [UmbrellaAttachmentProvider](../../src/main/java/dev/breezes/settlements/infrastructure/rendering/attachment/UmbrellaAttachmentProvider.java) |
+| Lantern hold, show, stow, or yield | [LanternAnimator](../../src/main/java/dev/breezes/settlements/domain/animation/LanternAnimator.java), [LanternCarryAnimations](../../src/main/java/dev/breezes/settlements/domain/animation/LanternCarryAnimations.java), [LanternAttachmentProvider](../../src/main/java/dev/breezes/settlements/infrastructure/rendering/attachment/LanternAttachmentProvider.java) |
 | The ballista's motion | [BallistaAnimator](../../src/main/java/dev/breezes/settlements/domain/ballista/BallistaAnimator.java), [BallistaAnimations](../../src/main/java/dev/breezes/settlements/domain/animation/BallistaAnimations.java), [BallistaModel](../../src/main/java/dev/breezes/settlements/infrastructure/minecraft/blocks/ballista/BallistaModel.java) |
 | Client registration | [ClientAnimationModule](../../src/main/java/dev/breezes/settlements/di/modules/client/ClientAnimationModule.java), [ClientAttachmentModule](../../src/main/java/dev/breezes/settlements/di/modules/client/ClientAttachmentModule.java) |
 
@@ -105,8 +106,9 @@ Where each clip is baked follows from who plays it:
   the registry for it throws, so registering a clip in
   [ClientAnimationModule](../../src/main/java/dev/breezes/settlements/di/modules/client/ClientAnimationModule.java) is
   the only way into villager playback.
-- The umbrella's carry and canopy clips and the ballista's clips are fixed content, baked statically by the classes that
-  play them, the carry clips for the villager rig and the canopy and ballista clips for their own rigs.
+- The umbrella's carry and canopy clips, the lantern's carry clips, and the ballista's clips are fixed content, baked
+  statically by the classes that play them, the carry clips for the villager rig and the canopy and ballista clips for
+  their own rigs.
 
 ### The slot order
 
@@ -120,7 +122,7 @@ flowchart BT
     Locomotion --> Idle["Idle animation"]
     Idle --> Action["Action animation"]
     Action --> Posture["Posture: sleep, exclusive"]
-    Posture --> Carry["Carry: umbrella"]
+    Posture --> Carry["Carry: umbrella and lantern"]
     Carry --> Ambient["Ambient: breathing, blink, and ambient brow"]
     Ambient --> HeadFrame["Head frame: the drawn head and the look residual"]
     HeadFrame --> Followers["Nose lag and brow reaction, then the nose and brow bounds"]
@@ -201,7 +203,7 @@ one replacing it.
   any authored lid pose. The blink owns the eyelids for that reason; an action that holds the eyes wide suppresses the
   blink instead.
 - Sleep owns the whole body and suppresses every component. Carry sits above it, so a villager going to bed in the rain
-  lowers its umbrella with its arm.
+  lowers its umbrella with its arm, while its lantern hides immediately and its carry pose fades to rest.
 
 ### Euler addition
 
@@ -219,9 +221,10 @@ sockets exist.
 
 A clip claims a pose for one arm, for both, or for neither; an arm it does not name is left to the slots below. The
 pipeline takes each arm independently from the highest slot whose current clip claims it, in the order Posture, Action,
-Idle animation, then Locomotion, and defaults to crossed. Carry takes no part: the umbrella carry is authored for crossed
-arms only, and letting it claim them would overrule every action beneath it. An action's claim holds from its first
-tick until its layer expires, whatever its weight, so the geometry snaps at the transitions instead of fading.
+Idle animation, then Locomotion, and defaults to crossed. Carry takes no part: the umbrella and lantern carry clips are
+authored for crossed arms only, and letting them claim those arms would overrule every action beneath them. An action's
+claim holds from its first tick until its layer expires, whatever its weight, so the geometry snaps at the transitions
+instead of fading.
 
 The resolved value controls all of the following:
 
@@ -260,7 +263,7 @@ A live advance runs in this order:
 
 ```mermaid
 flowchart TD
-    Update["Update: motion, held item, sleep, unhappiness, rain gate, every schedule, and the head trail"]
+    Update["Update: motion, held item, sleep, unhappiness, carried-prop gates, every schedule, and the head trail"]
     Update --> Slots["Authored slots and ambient, a pure read"]
     Slots --> HeadFrame["Head frame and look residual, composed from the evaluated pose"]
     HeadFrame --> Step["Nose lag and brow reaction step toward their targets in the head frame"]
@@ -290,7 +293,7 @@ sequenceDiagram
     participant Model as SettlementsVillagerModel
     participant Animator as VillagerAnimator
     participant Layers as Render layers
-    Renderer->>Adapter: before vanilla's render: sample key, motion, held item, rain, sleep, unhappiness, upside down
+    Renderer->>Adapter: before vanilla's render: sample key, motion, held item, carried-prop requests, sleep, unhappiness, upside down
     Renderer->>Adapter: vanilla's render calls setupRotations: the body heading it resolved
     Renderer->>Model: vanilla's render calls setupAnim
     Model->>Adapter: look and limb swing as vanilla resolved them
@@ -456,7 +459,7 @@ decided clip by clip, as [Animation Import](animation_import_blockbench.md) desc
 | Outline pass, marked by `SupplementaryEntityPass` (**P8**) | The same rule as a world render; the mark only suppresses decoration, such as speech bubbles |
 | Stats preview | Observational: evaluated into the renderer's own snapshot with the followers settled on the preview's observation, advancing and committing nothing; its attachments read that snapshot |
 | Render that is not a live sample, such as another mod's inventory preview of a live villager | Observational, as the stats preview |
-| Render with no client session, such as another mod's out-of-world preview | The look through a head trail settled on it and the unhappy shake alone, through [StatelessVillagerAnimator](../../src/main/java/dev/breezes/settlements/domain/animation/StatelessVillagerAnimator.java); arms crossed and the umbrella hidden |
+| Render with no client session, such as another mod's out-of-world preview | The look through a head trail settled on it and the unhappy shake alone, through [StatelessVillagerAnimator](../../src/main/java/dev/breezes/settlements/domain/animation/StatelessVillagerAnimator.java); arms crossed and carried props hidden |
 
 The outline pass runs after the frame's own entity pass, so within a frame it never comes first. It can come alone: it
 picks villagers by frustum, while vanilla's pass also skips an entity whose chunk section has not compiled yet. Under
@@ -501,7 +504,7 @@ expires early or changes clip:
 
 ---
 
-## Locomotion, idle animations, ambient, umbrella, and sleep
+## Locomotion, idle animations, ambient, carried props, and sleep
 
 ### Locomotion
 
@@ -554,12 +557,13 @@ it. [UmbrellaAnimator](../../src/main/java/dev/breezes/settlements/domain/animat
 deploy/stow state machine. It supplies the Carry slot's arm motion, the prop's own pose on the umbrella rig, and whether
 the umbrella shows, all into the snapshot.
 
-Its gate is steadied twice, on opposite sides of the network boundary, and neither pass substitutes for the other:
+Its gate is steadied twice on the client, and neither pass substitutes for the other:
 
-- the server debounces its rain sample before publishing, so a villager crossing under an eave never puts a flicker on
-  the wire;
-- each client animator holds its own delay before committing a change that does arrive, so a crowd whose gate flips on
-  one tick does not raise in unison.
+- [CarriedPropConditions](../../src/main/java/dev/breezes/settlements/infrastructure/minecraft/entities/villager/CarriedPropConditions.java)
+  debounces the rain check, so crossing under an eave does not flicker the request; no rain state crosses the network;
+- each animator delays committing its gate change, so a crowd whose request changes on one tick does not raise in
+  unison. The umbrella and lantern share this delay contract through
+  [DelayedGate](../../src/main/java/dev/breezes/settlements/domain/animation/DelayedGate.java).
 
 Two consequences are easy to break from the outside:
 
@@ -572,6 +576,47 @@ Two consequences are easy to break from the outside:
 The carry clips and the canopy clips overlap by design, in both directions. The carry pair additionally carries an
 invariant that a retune can break with nothing failing until someone watches an interrupt; it is stated
 at [UmbrellaCarryAnimations](../../src/main/java/dev/breezes/settlements/domain/animation/UmbrellaCarryAnimations.java).
+
+### Lantern
+
+The lantern is a client-gated Carry attachment beside the umbrella.
+[LanternAnimator](../../src/main/java/dev/breezes/settlements/domain/animation/LanternAnimator.java) owns its carry
+timing and visibility; the snapshot carries both to rendering. Ownership is synchronized from the server, while
+[CarriedPropConditions](../../src/main/java/dev/breezes/settlements/infrastructure/minecraft/entities/villager/CarriedPropConditions.java)
+decides whether the villager should carry it from the client's world conditions.
+
+A per-villager gate delay staggers both show and stow across a crowd. While shown, the crossed arms rest in a hold pose between rest and the interact peak. The show
+and stow gestures share the interact clip's timing, and the lantern appears or disappears at the gesture's peak,
+including between whole ticks. A gesture finishes before acting on an opposing gate change, so a brief request change
+cannot restart the motion or move the pop. The pose relationship and gesture timing belong to
+[LanternCarryAnimations](../../src/main/java/dev/breezes/settlements/domain/animation/LanternCarryAnimations.java) and
+[InteractAnimations](../../src/main/java/dev/breezes/settlements/domain/animation/InteractAnimations.java).
+
+The client plays these gestures in Carry because a server `triggerMotion(INTERACT)` would replace a behavior's Action
+clip and could not coordinate the visibility pop with its sampled peak. A stow therefore keeps drawing the owned
+lantern until the pop even after the request closes. Ownership becoming empty still hides it immediately through
+[LanternAttachmentProvider](../../src/main/java/dev/breezes/settlements/infrastructure/rendering/attachment/LanternAttachmentProvider.java).
+
+Straight arms, an item shown in either hand, sleep, and a visible umbrella each hide the lantern immediately. Its
+current carry pose, including a gesture interrupted before the peak, fades to rest without a stow gesture. Yield
+decisions and drawn arm geometry must use the same sample and claimant order; the previous snapshot would leave a
+frame with a lantern beside straight arms. The umbrella's visibility outlives its request, so the lantern yields
+through the entire lower-and-close. This yield also matters to composition: both carry contributions are additive on
+the crossed arms, and neither owns their rotation.
+
+Once every yield clears, a settle precedes the return show gesture; another yield restarts the settle. The gate keeps
+following the request while yielded, and return requires both the committed gate and the current request. That prevents
+daytime rain ending from bringing out a lantern only to stow it again. Returns use the settle without the crowd delay,
+since villagers finish their individual interruptions at different times.
+
+First sight bypasses the gesture and delay when the lantern is requested and no yield holds. An undecided client check
+does not consume first sight: rendering can reach a newly tracked villager before its first client tick. The umbrella
+still raises on first sight.
+
+The lantern swings with the stride. The swing is a lantern-slot rotation keyed on each gait clip, so it follows the
+distance walked and fades with the gait's crossfade weight as the villager stops, because the standing pose leaves the
+channel unkeyed. It keeps no per-villager state and simulates nothing, so it stops with the legs and does not react to
+turns. It swings about the hook because the lantern content draws from the hook.
 
 ### Sleep
 
@@ -618,6 +663,10 @@ The render order is:
 5. apply the slot's channels from the snapshot, turning about the content's own root pivot rather than about the origin
    it is drawn at (**P15**);
 6. render the attachment content.
+
+A hanging display profile keeps only the position that steps 2 and 3 reach and drops their rotation and scale, so the
+attachment keeps the model root's orientation and hangs straight while the torso and arms rotate. Straight means down in
+the model's frame, not the world's: an upside-down villager's lantern hangs toward the sky.
 
 A socket transform must start at the model root. Attachment rendering occurs after the model render pass has closed its
 pose-stack scope, so no ancestor transform can be assumed to remain active.
@@ -783,6 +832,13 @@ changing the system, cover the smallest relevant boundary:
   awake and sleep leaving none, and the observational evaluation reading the settled head;
 - locomotion at zero, partial, and full weight, gait selection, and limb-swing phase;
 - sleep snapping and the umbrella stowing under it;
+- carried-prop gate delays, cancellation, and restart after an abandoned request;
+- lantern first sight after undecided observations, show and stow visibility at the sampled peak, and completed
+  gestures under opposing gate changes;
+- each lantern yield hiding immediately, interrupted carry poses fading without a snap, return after an uninterrupted
+  settle, and the umbrella swapping props through its full stow;
+- a lantern remaining hidden on return when its current request has closed, and observational evaluations leaving its
+  state unchanged;
 - the ballista's poses through winding, firing, and a clip replaced or outlived by its state.
 
 Production clips are discovered from their factories rather than listed, so a new clip is covered without an edit to
@@ -807,6 +863,11 @@ under each gait and under actions that hold the head; a group of villagers for b
 rest, under the wide-eyed gaits, through an idle animation's blend, and under work expressions; and the gaze leading
 sharp turns and recentering, carrying the look under actions that hold the head, on upside-down villagers, and in the
 stats preview.
+
+Check a street of villagers at nightfall and dawn for staggered lantern gestures and pops at their peaks, rain for the
+umbrella swap and return, and daytime rain ending for a return that stays hidden. Exercise work motions, shown hand
+items, sleep, and villagers first entering view at night; watch robe clearance in the hold pose and the umbrella's
+raise and lower. Run these checks in single player and on a dedicated server.
 
 ---
 

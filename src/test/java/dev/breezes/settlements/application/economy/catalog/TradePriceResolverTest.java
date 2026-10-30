@@ -2,6 +2,7 @@ package dev.breezes.settlements.application.economy.catalog;
 
 import dev.breezes.settlements.domain.economy.catalog.ItemMatch;
 import dev.breezes.settlements.domain.entities.VillagerProfessionKey;
+import dev.breezes.settlements.infrastructure.minecraft.data.trading.SharedStockDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.trading.TradeCatalogDataManager;
 import com.google.gson.JsonParser;
 import net.minecraft.resources.ResourceLocation;
@@ -15,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TradePriceResolverTest {
 
     // Shared catalog loaded with the shepherd shears demand (basePricePerUnit=15).
-    private static final TradeCatalogDataManager CATALOG = new TradeCatalogDataManager();
+    private static final TradeCatalogDataManager CATALOG = new TradeCatalogDataManager(new SharedStockDataManager());
 
     static {
         CATALOG.reload(Map.of(
@@ -61,7 +62,7 @@ class TradePriceResolverTest {
 
     @Test
     void demandPriceIsAlwaysDeterministic() {
-        TradeCatalogDataManager manager = new TradeCatalogDataManager();
+        TradeCatalogDataManager manager = new TradeCatalogDataManager(new SharedStockDataManager());
         manager.reload(Map.of(
                 ResourceLocation.parse("settlements:trade_catalog/custom"),
                 JsonParser.parseString("""
@@ -91,7 +92,7 @@ class TradePriceResolverTest {
 
     @Test
     void offerBundlePriceReturnsBundleBasePriceWhenJitterIsZero() {
-        TradeCatalogDataManager manager = new TradeCatalogDataManager();
+        TradeCatalogDataManager manager = new TradeCatalogDataManager(new SharedStockDataManager());
         manager.reload(Map.of(
                 ResourceLocation.parse("settlements:trade_catalog/custom_offer"),
                 JsonParser.parseString("""

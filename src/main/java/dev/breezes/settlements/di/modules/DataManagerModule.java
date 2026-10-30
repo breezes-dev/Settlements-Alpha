@@ -20,6 +20,7 @@ import dev.breezes.settlements.infrastructure.minecraft.data.scavenge.ScavengeYi
 import dev.breezes.settlements.infrastructure.minecraft.data.scoring.TraitScorerDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.smelting.BlastOreRecipeDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.survey.BiomeSurveyDataManager;
+import dev.breezes.settlements.infrastructure.minecraft.data.trading.SharedStockDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.trading.TradeCatalogDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.traits.TraitDefinitionDataManager;
 
@@ -108,8 +109,14 @@ public final class DataManagerModule {
 
     @Provides
     @Singleton
-    static TradeCatalogDataManager tradeCatalogDataManager() {
-        return new TradeCatalogDataManager();
+    static SharedStockDataManager sharedStockDataManager() {
+        return new SharedStockDataManager();
+    }
+
+    @Provides
+    @Singleton
+    static TradeCatalogDataManager tradeCatalogDataManager(SharedStockDataManager sharedStockDataManager) {
+        return new TradeCatalogDataManager(sharedStockDataManager);
     }
 
     @Provides

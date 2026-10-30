@@ -1,6 +1,7 @@
 package dev.breezes.settlements.domain.presentation;
 
 import dev.breezes.settlements.domain.attachment.AttachmentSlot;
+import dev.breezes.settlements.domain.attachment.LanternSlot;
 import dev.breezes.settlements.domain.attachment.UmbrellaSlot;
 import dev.breezes.settlements.domain.inventory.EquipmentSlot;
 import lombok.Builder;
@@ -36,6 +37,11 @@ public final class InMemorySlotAnchorRegistry implements SlotAnchorRegistry {
                 .defaultDisplayContext(ItemDisplayContext.GROUND)
                 .build();
 
+        SlotAnchor lantern = SlotAnchor.builder()
+                .socket(SocketId.LANTERN)
+                .defaultDisplayContext(ItemDisplayContext.NONE)
+                .build();
+
         // The umbrella has no straight-arm carry variant, so its anchors declare no straightSocket
         SlotAnchor umbrellaLeft = SlotAnchor.builder()
                 .socket(SocketId.UMBRELLA_LEFT)
@@ -50,6 +56,7 @@ public final class InMemorySlotAnchorRegistry implements SlotAnchorRegistry {
                 .anchorsBySlot(Map.of(
                         EquipmentSlot.MAIN_HAND, mainHand,
                         EquipmentSlot.OFF_HAND, offHand,
+                        LanternSlot.LANTERN, lantern,
                         UmbrellaSlot.UMBRELLA_LEFT, umbrellaLeft,
                         UmbrellaSlot.UMBRELLA_RIGHT, umbrellaRight
                 ))

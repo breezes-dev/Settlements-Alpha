@@ -33,7 +33,7 @@ class StatelessVillagerAnimatorTest {
         dirty(snapshot);
 
         // Act
-        animator.evaluate(looking().build(), snapshot);
+        animator.evaluate(looking().lanternRequested(true).lanternCheckDecided(true).build(), snapshot);
 
         // Assert
         AnimationPose pose = snapshot.getPose();
@@ -47,6 +47,7 @@ class StatelessVillagerAnimatorTest {
         }
         assertEquals(ArmConfiguration.BOTH_CROSSED, snapshot.getArmConfiguration());
         assertFalse(snapshot.isUmbrellaVisible());
+        assertFalse(snapshot.isLanternVisible());
         for (int channel = 0; channel < UmbrellaAnimationTargets.RIG.getChannelCount(); channel++) {
             assertAtRest(snapshot.getUmbrellaPose(), channel);
         }
@@ -139,6 +140,7 @@ class StatelessVillagerAnimatorTest {
         }
         snapshot.setArmConfiguration(ArmConfiguration.BOTH_STRAIGHT);
         snapshot.setUmbrellaVisible(true);
+        snapshot.setLanternVisible(true);
     }
 
     private static void assertAtRest(AnimationPose pose, int channel) {
@@ -171,7 +173,7 @@ class StatelessVillagerAnimatorTest {
                 .build();
         return new VillagerAnimationPipeline(animations, idle, ambient, locomotion,
                 BakedAnimationRegistry.forVillager(animations, idle, ambient, locomotion), new UmbrellaAnimator(0),
-                new Random(1L));
+                new LanternAnimator(0), new Random(1L));
     }
 
 }

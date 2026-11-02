@@ -28,6 +28,8 @@ import dev.breezes.settlements.infrastructure.rendering.flare.FlarePlayback;
 import dev.breezes.settlements.infrastructure.rendering.highlight.EntityHighlightRenderer;
 import dev.breezes.settlements.infrastructure.rendering.raid.RaidWaveBeamRenderer;
 import dev.breezes.settlements.infrastructure.rendering.raid.RaidWaveBeamStore;
+import dev.breezes.settlements.infrastructure.rendering.toss.ItemTossFlightRenderer;
+import dev.breezes.settlements.infrastructure.rendering.toss.ItemTossFlightStore;
 import dev.breezes.settlements.infrastructure.rendering.zone.CultivationLilyPlacementPreviewRenderer;
 import dev.breezes.settlements.infrastructure.rendering.zone.CultivationLilyZoneRevealRenderer;
 import dev.breezes.settlements.presentation.ui.hud.ClockHudRenderer;
@@ -98,6 +100,10 @@ public interface ClientComponent {
     RaidWaveBeamStore raidWaveBeamStore();
 
     RaidWaveBeamRenderer raidWaveBeamRenderer();
+
+    ItemTossFlightStore itemTossFlightStore();
+
+    ItemTossFlightRenderer itemTossFlightRenderer();
 
     Set<ClientSessionResettable> clientSessionResettables();
 

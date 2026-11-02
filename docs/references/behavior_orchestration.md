@@ -475,6 +475,13 @@ nothing running, every channel is free. This is the distinction the plan lane's 
 `PLAN_BEHAVIOR_ACTIVE`](#plan_behavior_active-memory) flag deliberately does not draw, and it is the whole point of the
 lane: ambient social presentation runs *alongside* work that does not claim those channels.
 
+A cue claims what its script does to the body, and `SocialCueCatalogModule` is the authority on which cue claims what.
+Every cue claims `SOCIAL` and `COGNITION`, so focused work, which claims `COGNITION`, keeps the villager quiet. A cue
+that only speaks claims nothing more, so it runs beside routine work and combat. A cue that turns the villager's head
+or gestures also claims `INTERACTION`: its gaze outranks the running behavior's look target, and its gesture takes the
+arms. Do not add `INTERACTION` to a cue that only speaks. Nearly every behavior and the combat override claim it, so the
+cue would only ever run while the villager is idle.
+
 ### Cadence
 
 Four independent terms shape when a villager acts, each solving a different problem:

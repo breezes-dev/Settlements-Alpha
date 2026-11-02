@@ -4,13 +4,15 @@ import dev.breezes.settlements.application.ai.brain.ActivityArbiter;
 import dev.breezes.settlements.di.ServerScope;
 import dev.breezes.settlements.domain.concurrency.RenewableLease;
 import dev.breezes.settlements.infrastructure.minecraft.mixins.RaidMixin;
+import dev.breezes.settlements.infrastructure.network.features.raid.packet.ClientBoundRaidWaveBeamPacket;
 import jakarta.inject.Inject;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.raid.Raid;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -26,10 +28,9 @@ import java.util.UUID;
  * A committed mark belongs to its raid window independently of its cartographer.
  */
 @ServerScope
-@AllArgsConstructor(access = AccessLevel.PACKAGE, onConstructor_ = @Inject)
+@NoArgsConstructor(access = AccessLevel.PACKAGE, onConstructor_ = @Inject)
 public final class RaidWaveMarkRegistry {
 
-    private final RaidWaveMarkPublisher publisher;
     private final Map<Raid, WindowMark> marks = new IdentityHashMap<>();
 
     /**
@@ -104,8 +105,9 @@ public final class RaidWaveMarkRegistry {
     }
 
     /**
-     * Retires closed windows and publishes changes to marked selections after each server tick.
-     * A spawned wave leaves its marker to expire on its own; a stopped or lost raid clears it.
+     * Retires closed windows and publishes changes to committed selections. Call once per server tick.
+     * <p>
+     * Spawning a wave does not publish a clear. Stopped, ended, or removed raids clear any published selection.
      */
     public void tick() {
         if (this.marks.isEmpty()) {
@@ -123,7 +125,7 @@ public final class RaidWaveMarkRegistry {
                 iterator.remove();
             } else if (raid.isStopped() || raid.isOver() || level.getRaids().get(raid.getId()) != raid) {
                 if (mark.publishedSelection != null) {
-                    // A stopped raid is outside every audience, so the clear goes to every player in its level
+                    // The raid may no longer have an audience; previous viewers still need the clear
                     this.publish(level.players(), raid, null);
                 }
                 iterator.remove();
@@ -149,7 +151,8 @@ public final class RaidWaveMarkRegistry {
 
     private void publish(@Nonnull List<ServerPlayer> recipients, @Nonnull Raid raid, @Nullable BlockPos position) {
         for (ServerPlayer recipient : recipients) {
-            this.publisher.send(recipient, raid.getLevel().dimension(), raid.getId(), position);
+            PacketDistributor.sendToPlayer(recipient,
+                    new ClientBoundRaidWaveBeamPacket(raid.getLevel().dimension(), raid.getId(), position));
         }
     }
 
@@ -167,7 +170,7 @@ public final class RaidWaveMarkRegistry {
         private final RenewableLease lease = new RenewableLease();
         private boolean marked;
         /**
-         * The selection the audience last received; null before the first publication and after a clear.
+         * Last published selection; null before the first publication and after a clear.
          */
         @Nullable
         private BlockPos publishedSelection;

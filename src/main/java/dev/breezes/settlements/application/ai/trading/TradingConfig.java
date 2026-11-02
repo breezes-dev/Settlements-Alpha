@@ -7,11 +7,8 @@ import dev.breezes.settlements.infrastructure.config.annotations.ConfigurationTy
 import dev.breezes.settlements.infrastructure.config.annotations.integers.IntegerConfig;
 
 /**
- * Trading is precondition-gated on a nearby willing partner, so low cooldowns are intentional —
- * a villager will repeatedly check availability rather than wait a long time between attempts.
- * The BehaviorTimingConfig interface maps to the initiator role (the primary actor). The
- * responder-side (acceptor) cooldowns are accessed via the accept-prefixed methods below,
- * used directly by the catalog to construct per-role CooldownRange values.
+ * Timing and negotiation settings for villager trades.
+ * The BehaviorTimingConfig methods expose the initiator's cooldowns.
  */
 @BehaviorConfig(name = "trading", type = ConfigurationType.BEHAVIOR)
 public record TradingConfig(
@@ -23,6 +20,7 @@ public record TradingConfig(
                 min = 10)
         int partnerScanIntervalSeconds,
 
+        // Short retry cooldowns are intentional: an attempt still requires a nearby willing seller.
         @IntegerConfig(type = ConfigurationType.BEHAVIOR,
                 identifier = "initiate_behavior_cooldown_seconds_min",
                 description = "Minimum seconds a villager waits after a trade it initiated before initiating another.",
@@ -87,13 +85,6 @@ public record TradingConfig(
         int openingOfferDurationSeconds,
 
         @IntegerConfig(type = ConfigurationType.BEHAVIOR,
-                identifier = "deal_duration_seconds",
-                description = "Seconds spent on the deal phase before the session closes.",
-                defaultValue = 1,
-                min = 1)
-        int dealDurationSeconds,
-
-        @IntegerConfig(type = ConfigurationType.BEHAVIOR,
                 identifier = "walkaway_duration_seconds",
                 description = "Seconds spent on the walk-away phase before the session closes.",
                 defaultValue = 1,
@@ -111,7 +102,6 @@ public record TradingConfig(
         }
     }
 
-    // BehaviorTimingConfig — maps to the initiator role, which is the primary actor
     @Override
     public int preconditionCheckCooldownMin() {
         return this.partnerScanIntervalSeconds;
@@ -138,10 +128,6 @@ public record TradingConfig(
 
     public ClockTicks openingOfferDuration() {
         return ClockTicks.seconds(this.openingOfferDurationSeconds);
-    }
-
-    public ClockTicks dealDuration() {
-        return ClockTicks.seconds(this.dealDurationSeconds);
     }
 
     public ClockTicks walkawayDuration() {

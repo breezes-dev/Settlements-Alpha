@@ -20,6 +20,7 @@ import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.Cl
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.ServerBoundCloseUiPacket;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.ServerBoundHeartbeatUiPacket;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.ServerBoundOpenUiPacket;
+import dev.breezes.settlements.infrastructure.network.features.ui.toss.packet.ClientBoundItemTossPacket;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -31,10 +32,10 @@ import javax.annotation.Nonnull;
 public class PacketRegistry {
 
     /**
-     * Wire-format version of all Settlements payloads, synced attachments, and synced entity data.
-     * Prevents clients from joining servers compiled with a different version.
+     * Wire-format compatibility version for Settlements payloads, synced attachments, and synced entity data.
+     * Shared payload channels require matching values on the client and server.
      */
-    private static final String NETWORK_VERSION = "5";
+    private static final String NETWORK_VERSION = "6";
 
     public static void bindPacketHandlers(@Nonnull RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(NETWORK_VERSION).optional();
@@ -46,10 +47,10 @@ public class PacketRegistry {
         registerClient(registrar, ClientBoundFlarePacket.ID, ClientBoundFlarePacket.CODEC);
         registerClient(registrar, ClientBoundRaidWaveBeamPacket.ID, ClientBoundRaidWaveBeamPacket.CODEC);
         registerClient(registrar, ClientBoundSettlementArrivalPacket.ID, ClientBoundSettlementArrivalPacket.CODEC);
+        registerClient(registrar, ClientBoundItemTossPacket.ID, ClientBoundItemTossPacket.CODEC);
 
         registerServer(registrar, ServerBoundBallistaAimPacket.ID, ServerBoundBallistaAimPacket.CODEC);
 
-        // Shared UiSync lifecycle packets
         registerServer(registrar, ServerBoundOpenUiPacket.ID, ServerBoundOpenUiPacket.CODEC);
         registerServer(registrar, ServerBoundCloseUiPacket.ID, ServerBoundCloseUiPacket.CODEC);
         registerServer(registrar, ServerBoundHeartbeatUiPacket.ID, ServerBoundHeartbeatUiPacket.CODEC);
@@ -59,7 +60,6 @@ public class PacketRegistry {
         registerClient(registrar, ClientBoundUiUnavailablePacket.ID, ClientBoundUiUnavailablePacket.CODEC);
         registerClient(registrar, ClientBoundDayPlanSnapshotPacket.ID, ClientBoundDayPlanSnapshotPacket.CODEC);
 
-        // Villager stats UI snapshots
         registerClient(registrar, ClientBoundVillagerStatsSnapshotPacket.ID, ClientBoundVillagerStatsSnapshotPacket.CODEC);
         registerClient(registrar, ClientBoundVillagerInventorySnapshotPacket.ID, ClientBoundVillagerInventorySnapshotPacket.CODEC);
         registerClient(registrar, ClientBoundVillagerTradeCatalogSnapshotPacket.ID, ClientBoundVillagerTradeCatalogSnapshotPacket.CODEC);
@@ -69,9 +69,7 @@ public class PacketRegistry {
     private static <T extends ClientBoundPacket> void registerClient(@Nonnull PayloadRegistrar registrar,
                                                                      @Nonnull CustomPacketPayload.Type<T> packetId,
                                                                      @Nonnull StreamCodec<FriendlyByteBuf, T> codec) {
-        // NeoForge captures this callback during mod setup, but the client receiver only becomes
-        // available after the Dagger client subcomponent is built. Resolving it lazily keeps the
-        // lifecycle edge explicit and avoids forcing earlier component initialization.
+        // The client component may not exist at registration, so resolve the receiver when a packet arrives
         registrar.playToClient(packetId, codec,
                 (packet, context) -> SettlementsDagger.client().clientSidePacketReceiver().onReceivePacket(packet, context));
     }
@@ -79,9 +77,7 @@ public class PacketRegistry {
     private static <T extends ServerBoundPacket> void registerServer(@Nonnull PayloadRegistrar registrar,
                                                                      @Nonnull CustomPacketPayload.Type<T> packetId,
                                                                      @Nonnull StreamCodec<FriendlyByteBuf, T> codec) {
-        // NeoForge captures this callback during mod setup, but the server receiver only becomes
-        // available after the Dagger server subcomponent is built. Resolving it lazily keeps the
-        // lifecycle edge explicit and avoids forcing earlier component initialization.
+        // The server component belongs to a world session, so resolve the current receiver when a packet arrives
         registrar.playToServer(packetId, codec,
                 (packet, context) -> SettlementsDagger.serverOrThrow().serverSidePacketReceiver().onReceivePacket(packet, context));
     }

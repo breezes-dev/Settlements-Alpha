@@ -63,6 +63,7 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
 
     private static final int DEAL_PRICE_EPSILON = 1;
     private static final double TRADE_CLOSE_ENOUGH_DISTANCE = 3.0D;
+    private static final long NO_EXCHANGE_BEATS_PLAYED = -1L;
 
     private final TradingConfig config;
     private final TradeSessionRegistry sessionRegistry;
@@ -82,6 +83,10 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
     @Nullable
     private UUID activeSessionId;
     private boolean tradeExecuted;
+    /**
+     * Last processed exchange tick relative to DEAL entry, or NO_EXCHANGE_BEATS_PLAYED before processing starts.
+     */
+    private long exchangeBeatsPlayedThroughTick = NO_EXCHANGE_BEATS_PLAYED;
 
     public TradeInitiateBehavior(@Nonnull TradingConfig config,
                                  @Nonnull BehaviorSupport support,
@@ -123,6 +128,7 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
         this.activeDemand = null;
         this.activeSessionId = null;
         this.tradeExecuted = false;
+        this.exchangeBeatsPlayedThroughTick = NO_EXCHANGE_BEATS_PLAYED;
     }
 
     @Override
@@ -131,15 +137,18 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
 
         this.sessionRegistry.getActiveSession(villager.getUUID()).ifPresent(session -> {
             TradeSessionPhase phase = session.getPhase();
-            if (phase != TradeSessionPhase.DEAL && phase != TradeSessionPhase.WALK_AWAY) {
+            if (phase == TradeSessionPhase.DEAL) {
+                // An interrupted exchange has already settled; keeping its session open would leave the seller waiting.
+                log.trace("Closing interrupted deal as the behavior stops: sessionId={}", session.getSessionId());
+                this.sessionRegistry.closeSession(session.getSessionId(), CloseReason.DEAL);
+            } else if (phase != TradeSessionPhase.WALK_AWAY) {
                 log.trace("Closing unfinished trade session as the behavior stops: sessionId={}, phase={}",
                         session.getSessionId(), phase);
                 this.sessionRegistry.closeSession(session.getSessionId(), CloseReason.EXTERNAL_CANCEL);
             }
         });
 
-        // The override lane builds this behavior fresh for every run, so its own cooldown never spans two attempts.
-        // The memory carries the wait instead, after any outcome, so a failed attempt does not re-invite the same seller.
+        // Store the cooldown in memory so it survives replacement of this behavior and applies after failed attempts.
         ClockTicks cooldown = ClockTicks.seconds(RandomUtil.randomInt(this.config.initiateBehaviorCooldownSecondsMin(),
                 this.config.initiateBehaviorCooldownSecondsMax(), true));
         villager.getSettlementsBrain().setMemory(MemoryTypeRegistry.TRADE_INITIATE_COOLDOWN, true, cooldown);
@@ -148,6 +157,7 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
         this.activeDemand = null;
         this.activeSessionId = null;
         this.tradeExecuted = false;
+        this.exchangeBeatsPlayedThroughTick = NO_EXCHANGE_BEATS_PLAYED;
     }
 
     private ICondition<BaseVillager> canInitiateTrade() {
@@ -201,8 +211,7 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
             return StepResult.complete();
         }
 
-        // Capture execution-phase data from the scan before discarding the candidate.
-        // pendingCandidate is a precondition-time artifact and must not be read after this stage.
+        // Retain the matched demand for settlement; a later partner scan must not change which demand this trade fulfills.
         this.activeDemand = this.pendingCandidate.activeDemand();
         int priceJitter = this.pendingCandidate.offerEntry().priceJitter();
 
@@ -306,7 +315,6 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
         }
 
         if (session.getBuyerOffer() >= session.getSellerAsk()) {
-            // If consensus is reached, deal
             return this.enterDeal(buyer, session);
         }
 
@@ -333,7 +341,19 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
             return StepResult.complete();
         }
 
-        if (!this.phaseElapsed(session, buyer.level().getGameTime(), this.config.dealDuration().getTicksAsInt())) {
+        long currentGameTime = buyer.level().getGameTime();
+        // Shown only for a trade that executed, so every exchange a player sees moved real goods
+        if (this.tradeExecuted) {
+            BaseVillager seller = this.resolveParticipant(buyer.level(), session.getSellerId()).orElse(null);
+            long dealElapsedTicks = currentGameTime - session.getPhaseEnteredGameTime();
+            // A window over every tick since the last call, so a skipped behavior tick neither drops nor repeats a beat
+            this.tradeSessionPresenter.presentExchangeBeats(session, buyer, seller, this.exchangeBeatsPlayedThroughTick,
+                    dealElapsedTicks);
+            // Keep progress monotonic so re-entering DEAL cannot replay earlier beats.
+            this.exchangeBeatsPlayedThroughTick = Math.max(this.exchangeBeatsPlayedThroughTick, dealElapsedTicks);
+        }
+
+        if (!this.phaseElapsed(session, currentGameTime, this.tradeSessionPresenter.exchangeLengthTicks(session))) {
             return StepResult.noOp();
         }
 
@@ -383,7 +403,6 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
 
         if (!this.tradeExecuted) {
             if (!this.villagerWallet.canAfford(buyer, session.getBuyerOffer())) {
-                // If buyer cannot afford the deal, walk away
                 log.debug("Buyer {} cannot afford the deal at {} emeralds, walking away", buyer.getUUID(),
                         session.getBuyerOffer());
                 return this.enterWalkAway(buyer, seller, session);
@@ -395,8 +414,8 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
                 return this.enterWalkAway(buyer, seller, session);
             }
 
-            // The session remains open for a short DEAL phase so both villagers can render the final
-            // state, but the economic mutation must happen exactly once on the transition into DEAL.
+            // The session remains open through DEAL so both villagers can play out the exchange, but the
+            // economic mutation must happen exactly once on the transition into DEAL.
             try {
                 this.tradeExecutor.execute(session, buyer, seller);
             } catch (RuntimeException exception) {
@@ -465,7 +484,7 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
     }
 
     /**
-     * Formats a human-readable detail string from the session's agreed prices.
+     * Returns a human-readable summary of the traded goods and emerald price.
      */
     private static String buildTradeDetail(@Nonnull TradeSession session) {
         String itemPath = BuiltInRegistries.ITEM.getKey(session.getMatchedItem()).getPath();
@@ -476,7 +495,7 @@ public final class TradeInitiateBehavior extends VillagerStateMachineBehavior {
     }
 
     /**
-     * Supplements the flat trade-detail string with structured slots for monologue phrasing
+     * Adds structured details describing the traded goods and emerald price to the outcome.
      */
     private static void recordTradeDetailFields(@Nonnull BehaviorOutcome outcome,
                                                 @Nonnull TradeSession session) {

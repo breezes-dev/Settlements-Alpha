@@ -252,8 +252,10 @@ COMBAT, so entry waits for the next policy evaluation while withdrawal waits for
   rather than relaunch the same stale choice on every tick.
 - **No action, no target in reach, or a revoked selection.** The runner only turns the villager to face the nearest
   aware hostile. Nothing moves it: `COMBAT`'s activity package is empty.
-- **Villagers keep talking.** The runner claims `MOVEMENT` and `INTERACTION` only, so social cues on other channels
-  still fire mid-fight, and the `COMBAT` activity has a dialogue occasion of its own.
+- **Villagers keep talking.** The runner claims `MOVEMENT` and `INTERACTION` only, so a cue that only speaks still
+  fires mid-fight, while one that turns the villager's head or gestures waits for the fight to end (see
+  [Channel-granular admission](behavior_orchestration.md#channel-granular-admission)). The `COMBAT` activity has a
+  dialogue occasion of its own.
 - An action that throws ends the runner; the policy installs a fresh one at its next evaluation while the verdict
   holds. Removal, unload and a brain refresh stop it through the lane's `forceStop`.
 

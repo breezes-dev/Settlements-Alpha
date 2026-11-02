@@ -68,6 +68,19 @@ public abstract class SocialCueCatalogModule {
     private static final ClockTicks WINDOW_JITTER = ClockTicks.minutes(2);
 
     /**
+     * Channels of a cue whose script only speaks: it runs beside routine work and combat, but not focused work.
+     */
+    private static final Set<BehaviorChannel> SPEECH_ONLY_CUE_CHANNELS =
+            Set.of(BehaviorChannel.SOCIAL, BehaviorChannel.COGNITION);
+
+    /**
+     * Channels of a cue whose script turns the villager's head or gestures: it also waits out any behavior using the
+     * villager's hands, combat included.
+     */
+    private static final Set<BehaviorChannel> GESTURE_CUE_CHANNELS =
+            Set.of(BehaviorChannel.SOCIAL, BehaviorChannel.COGNITION, BehaviorChannel.INTERACTION);
+
+    /**
      * Cues that fire regardless of the SIS kill-switch.
      */
     @Multibinds
@@ -114,8 +127,7 @@ public abstract class SocialCueCatalogModule {
     static SocialCueCatalogEntry greetPlayer() {
         return SocialCueCatalogEntry.builder()
                 .key("greet_player")
-                .channel(BehaviorChannel.SOCIAL)
-                .channel(BehaviorChannel.INTERACTION)
+                .channels(GESTURE_CUE_CHANNELS)
                 .cooldown(ClockTicks.seconds(60))
                 .perTargetCooldown(ClockTicks.minutes(10))
                 .bypassLaneRefractory(true)
@@ -172,8 +184,7 @@ public abstract class SocialCueCatalogModule {
                                                  AmbientDialogueContextAssembler contextAssembler) {
         return SocialCueCatalogEntry.builder()
                 .key("villager_chatter")
-                .channel(BehaviorChannel.SOCIAL)
-                .channel(BehaviorChannel.INTERACTION)
+                .channels(SPEECH_ONLY_CUE_CHANNELS)
                 .cooldown(ClockTicks.seconds(socialCueConfig.villagerChatterCooldownSeconds()))
                 .perTargetCooldown(ClockTicks.ZERO)
                 .trigger(villager -> {
@@ -201,8 +212,7 @@ public abstract class SocialCueCatalogModule {
                                                AmbientDialogueContextAssembler contextAssembler) {
         return SocialCueCatalogEntry.builder()
                 .key("zombie_sighted")
-                .channel(BehaviorChannel.SOCIAL)
-                .channel(BehaviorChannel.INTERACTION)
+                .channels(SPEECH_ONLY_CUE_CHANNELS)
                 .cooldown(ZOMBIE_SIGHTED_COOLDOWN)
                 .perTargetCooldown(ClockTicks.minutes(5))
                 .fireChance(ZOMBIE_REACTION_FIRE_CHANCE)
@@ -272,8 +282,7 @@ public abstract class SocialCueCatalogModule {
         int gossipMaxDistanceSquared = eventLaneConfig.gossipMaxDistanceSquared();
         return SocialCueCatalogEntry.builder()
                 .key("gossip_initiate")
-                .channel(BehaviorChannel.SOCIAL)
-                .channel(BehaviorChannel.INTERACTION)
+                .channels(GESTURE_CUE_CHANNELS)
                 .cooldown(ClockTicks.seconds(eventLaneConfig.gossipInitiateCooldownSeconds()))
                 .perTargetCooldown(ClockTicks.seconds(eventLaneConfig.gossipTargetCooldownSeconds()))
                 .trigger(initiator -> {
@@ -338,8 +347,7 @@ public abstract class SocialCueCatalogModule {
                                               EventLaneConfig eventLaneConfig) {
         return SocialCueCatalogEntry.builder()
                 .key("gossip_accept")
-                .channel(BehaviorChannel.SOCIAL)
-                .channel(BehaviorChannel.INTERACTION)
+                .channels(GESTURE_CUE_CHANNELS)
                 .cooldown(ClockTicks.seconds(eventLaneConfig.gossipAcceptCooldownSeconds()))
                 // Per-target cooldown is zero: the context key is a unique session UUID, so a
                 // per-target rate limit keyed on it can never match across sessions and would
@@ -431,8 +439,7 @@ public abstract class SocialCueCatalogModule {
                                                           double fireChance) {
         return SocialCueCatalogEntry.builder()
                 .key(key)
-                .channel(BehaviorChannel.SOCIAL)
-                .channel(BehaviorChannel.INTERACTION)
+                .channels(SPEECH_ONLY_CUE_CHANNELS)
                 .cooldown(SITUATIONAL_DIALOGUE_COOLDOWN)
                 .perTargetCooldown(ClockTicks.ZERO)
                 .fireChance(fireChance)

@@ -20,8 +20,10 @@ import java.util.Map;
 public final class SettlementsVillagerRenderer extends MobRenderer<BaseVillager, SettlementsVillagerModel> {
 
     private static final float SHADOW_RADIUS = 0.5F;
-    // Compensate for the model's dimensions so its rendered size matches vanilla villagers
-    private static final float VANILLA_MODEL_SCALE = 0.9375F;
+    /**
+     * Scale the villager model is drawn at before the age scale, so its rendered size matches vanilla villagers.
+     */
+    public static final float VANILLA_MODEL_SCALE = 0.9375F;
 
     private final VillagerAnimationRenderAdapter animationAdapter;
 

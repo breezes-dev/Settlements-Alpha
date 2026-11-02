@@ -35,6 +35,8 @@ import dev.breezes.settlements.infrastructure.network.features.ui.sync.handler.C
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.ClientBoundHeartbeatAckUiPacket;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.ClientBoundOpenUiPacket;
 import dev.breezes.settlements.infrastructure.network.features.ui.sync.packet.ClientBoundUiUnavailablePacket;
+import dev.breezes.settlements.infrastructure.network.features.ui.toss.handler.ClientBoundItemTossPacketHandler;
+import dev.breezes.settlements.infrastructure.network.features.ui.toss.packet.ClientBoundItemTossPacket;
 
 @Module
 public abstract class ClientNetworkModule {
@@ -113,5 +115,10 @@ public abstract class ClientNetworkModule {
     @IntoMap
     @ClassKey(ClientBoundSettlementArrivalPacket.class)
     abstract ClientSidePacketHandler<?> settlementArrival(ClientBoundSettlementArrivalPacketHandler impl);
+
+    @Binds
+    @IntoMap
+    @ClassKey(ClientBoundItemTossPacket.class)
+    abstract ClientSidePacketHandler<?> itemToss(ClientBoundItemTossPacketHandler impl);
 
 }

@@ -130,6 +130,8 @@ import java.util.Set;
 @Getter
 public class BaseVillager extends Villager implements ISettlementsVillager, IVillagerHunger, ProvidesTeardownLedger {
 
+    // Height of a full-size adult villager's crossed arms above its feet, in blocks
+    private static final float HAND_HEIGHT = 1.19F;
     private static final double DEFAULT_ATTACK_DAMAGE = 2.5D;
     private static final double DEFAULT_MOVEMENT_SPEED = 0.5D;
     private static final double DEFAULT_FOLLOW_RANGE = 48.0D;
@@ -139,21 +141,18 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     private static final int MAX_DISCHARGE_ATTEMPTS = 10;
     private static final float BREED_HUNGER_THRESHOLD = 0.7F;
     private static final int BREED_FOOD_REQUIREMENT = 32;
-    // Chance a bred child is born a nitwit, echoing the profession variety of vanilla natural-spawn villages.
+    // Chance a bred child is born a nitwit, echoing the profession variety of vanilla natural-spawn villages
     private static final float NITWIT_BREED_CHANCE = 0.03F;
     private static final ItemMatch FOODS_MATCH = new ItemMatch.TagRef(Tags.Items.FOODS);
 
     private static final ClockTicks RECONCILER_COOLDOWN_TICKS = ClockTicks.seconds(5);
-    // Perception drains the WorldEventBus on a coarse cadence instead of every tick. The bus is a
-    // catch-up cursor, so batching only enlarges each delta — no events are missed as long as this
-    // interval stays well under the bus TTL (EventLaneConfig.worldEventTtlTicks).
+    // Keep perception updates within the event retention window so batching does not lose unseen events
     private static final ClockTicks PERCEPTION_COOLDOWN_TICKS = ClockTicks.seconds(1);
     // Occasional name sync for catching direct name data modifications
     private static final ClockTicks NAME_SYNC_COOLDOWN_TICKS = ClockTicks.minutes(1);
     // How often a villager looks for new settlements or re-checks the settlement it belongs to
     private static final ClockTicks MEMBERSHIP_CHECK_COOLDOWN_TICKS = ClockTicks.minutes(2);
-    // Short against the minutes a villager spends at MEET, so a member that reaches its bell is checked in while it
-    // stands there, between the strolls that take it out of check-in range
+    // Check frequently enough to catch a member at its bell between strolls out of check-in range
     private static final ClockTicks CHECK_IN_COOLDOWN_TICKS = ClockTicks.seconds(5);
     private static final ClockTicks OWNED_LANTERN_SAMPLE_COOLDOWN_TICKS = ClockTicks.seconds(5);
 
@@ -195,7 +194,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     private boolean brainGoalsInitialized;
 
     /**
-     * Not persisted: a villager that unloads mid-day regenerates its plan on its next plan tick
+     * Assigned daily plan, or null when none is available. Not persisted.
      */
     @Nullable
     private DayPlan dayPlan;
@@ -214,8 +213,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     @Nullable
     private ITickable hungerDrainTimer;
     /**
-     * Cosmetic client-side restock spiral state. Never persisted -- reconstructed fresh (idle) on load,
-     * which is fine since it only ever plays for the ~1 second following a live {@link #restock()} call.
+     * Transient restock reaction state, idle on a newly constructed villager.
      */
     private final RestockReaction restockReaction;
     @Getter(AccessLevel.NONE)
@@ -261,12 +259,10 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         this.sootyExpiresAtGameTime = 0L;
     }
 
-    /**
-     * Installs the Settlements custom navigation logic. Runs from the {@code Mob} super-constructor on both
-     * dist sides, before any field above is initialized -- must stay a pure construction call.
-     */
     @Override
     protected PathNavigation createNavigation(@Nonnull Level level) {
+        // Mob construction invokes this on both logical sides before this class's fields are initialized.
+        // Do not read instance fields or resolve server services here.
         return new SettlementsGroundPathNavigation(this, level);
     }
 
@@ -295,35 +291,22 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Sets the continuous animation state for this entity.
-     * <p>
-     * This method is <b>idempotent</b>. Setting the same archetype repeatedly
-     * (e.g., every tick) will not interrupt or restart the current animation cycle.
-     * Use this for continuous, looping states where the animation should persist
-     * smoothly until a new state is applied.
-     * <p>
-     * <b>Examples:</b> {@code IDLE}, {@code REEL_OUT}, {@code EAT}
+     * Sets the held animation state without restarting an unchanged archetype.
      *
-     * @param archetype The continuous animation state to apply.
-     * @see #triggerMotion(AnimationArchetype) for one-shot actions.
+     * @param archetype the animation state to hold
+     * @see #triggerMotion(AnimationArchetype)
      */
     public void setMotion(@Nonnull AnimationArchetype archetype) {
         DATA_MOTION_ARCHETYPE.set(this.entityData, archetype.toNetworkByte());
     }
 
     /**
-     * Triggers a discrete, one-shot animation, forcing it to play from the beginning.
-     * <p>
-     * Unlike {@link #setMotion(AnimationArchetype)}, calling this method will <i>always</i>
-     * force the client to restart the animation from frame 0, even if the requested archetype
-     * is the same as the current one.
-     * <p>
-     * <b>Examples:</b> {@code SWING_HEAVY}, {@code INTERACT}, {@code CAST}
+     * Triggers a one-shot animation from the beginning, including when the archetype is unchanged.
      *
-     * @param archetype The one-shot animation to trigger.
+     * @param archetype the animation to trigger
      */
     public void triggerMotion(@Nonnull AnimationArchetype archetype) {
-        // Generation counter intentionally wraps from 127 to -128 on overflow
+        // Only a change in generation matters, so byte overflow intentionally wraps.
         DATA_MOTION_GENERATION.set(this.entityData, (byte) (DATA_MOTION_GENERATION.get(this.entityData) + 1));
         DATA_MOTION_ARCHETYPE.set(this.entityData, archetype.toNetworkByte());
     }
@@ -334,6 +317,13 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
 
     public byte getMotionGeneration() {
         return DATA_MOTION_GENERATION.get(this.entityData);
+    }
+
+    /**
+     * Returns the height of this villager's crossed arms above its feet, in blocks, scaled by age and size.
+     */
+    public float getHandHeight() {
+        return HAND_HEIGHT * this.getAgeScale() * this.getScale();
     }
 
     @Override
@@ -370,7 +360,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Whether rain asks this villager to carry its umbrella; false on the server and before its first client tick.
+     * Whether sampled rain conditions request an umbrella; false on the server and before the first client sample.
      */
     @ClientSide
     public boolean isUmbrellaRequested() {
@@ -378,8 +368,8 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Whether darkness and sky exposure ask this villager to carry its owned lantern;
-     * false on the server and before its first client tick.
+     * Whether sampled darkness and sky exposure request this villager's owned lantern;
+     * false on the server and before the first client sample.
      */
     @ClientSide
     public boolean isLanternRequested() {
@@ -417,7 +407,9 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * @throws IllegalStateException if neither finalizeSpawn nor load has set this villager up
+     * Returns this villager's Settlements inventory.
+     *
+     * @throws IllegalStateException if no inventory has been initialized or loaded
      */
     @Override
     public VillagerInventory getSettlementsInventory() {
@@ -452,8 +444,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Assigns a deterministic name the first time this villager spawns or loads without one.
-     * A player-applied name tag can overwrite this.
+     * Assigns a UUID-derived name if this villager has no custom name, preserving any existing name.
      */
     private void assignNameIfAbsent() {
         if (this.getCustomName() != null) {
@@ -479,13 +470,10 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             // a live villager under /data merge.
             this.settlementsBrain.initialize();
 
-            // NBT deserializes before an entity is added to the level, so getName() is already
-            // accurate here -- this is the name directory's self-healing seam: a missed write, a
-            // bad prune, or a restored backup repairs itself the next time this villager loads.
+            // Publish after NBT has loaded so the directory can recover a missing or stale saved name.
             this.upsertNameInDirectory();
 
-            // Members skip the assignment cadence and may never check in, babies among them, so a member's lost roster
-            // row is restored here
+            // Members, including babies, may never check in, so repair missing roster entries on join.
             SettlementsDagger.serverOrThrow().settlementMembershipService().repair(this);
         }
     }
@@ -494,12 +482,11 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     public void setCustomName(@Nullable Component name) {
         super.setCustomName(name);
 
-        // Do nothing before the entity is loaded into the world
+        // Names can be set during construction or load, before this villager belongs in the server directory.
         if (!this.isAddedToLevel() || this.level().isClientSide()) {
             return;
         }
 
-        // Safe here because onAddedToLevel unconditionally upserts
         this.upsertNameInDirectory();
     }
 
@@ -526,7 +513,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             return null;
         }
 
-        // Select child villager type
         VillagerType childType;
         double typeRoll = this.random.nextDouble();
         if (typeRoll < 0.50D) {
@@ -538,13 +524,11 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         }
         child.setVillagerData(child.getVillagerData().setType(childType));
 
-        // Inherit genetics
         GeneticsProfile partnerGenetics = otherParent instanceof BaseVillager partner ? partner.getGenetics() : new GeneticsProfile();
         child.setData(AttachmentRegistry.VILLAGER_GENETICS, this.getGenetics().crossover(partnerGenetics, this.random));
 
         child.finalizeSpawn(level, level.getCurrentDifficultyAt(child.blockPosition()), MobSpawnType.BREEDING, null);
 
-        // Child has a chance to be nitwit
         if (this.random.nextFloat() < NITWIT_BREED_CHANCE) {
             child.setVillagerData(child.getVillagerData().setProfession(VillagerProfession.NITWIT));
         }
@@ -573,20 +557,15 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Returns true when this villager should not run or accept new social cues.
-     * <p>
-     * Future states (e.g. stunned, panicking, in-dialogue) should be added here rather than
-     * in the arbiter so the arbiter stays free of lifecycle details.
+     * Returns whether this villager can run or accept social cues in its current lifecycle and activity state.
      */
     public boolean isSociallyAvailable() {
         if (this.isSleeping() || this.isBaby()) {
             return false;
         }
 
-        // Check active brain activity
         Optional<Activity> activity = this.getBrain().getActiveNonCoreActivity();
         if (activity.isEmpty()) {
-            // If no activity is active, then we are socially available
             return true;
         }
 
@@ -627,18 +606,14 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     @Override
     public void load(@Nonnull CompoundTag nbtTag) {
         super.load(nbtTag);
-        // Backfills villagers persisted before this field existed; a no-op once CustomName is set.
         this.assignNameIfAbsent();
 
-        // A load on the client builds a display copy, such as a spawner's, that is never saved. It shows only what the
-        // tag carried, whose saved attribute modifiers already hold any genetic size, and gets no genes or food the
-        // server never gave the villager.
+        // Client display copies must retain saved genetic attributes without generating genes or starting food.
         if (this.level().isClientSide()) {
             return;
         }
 
-        // super.load has replaced every attachment the tag carried, so genes are rolled and starting food seeded only
-        // for a villager still without them
+        // Restore attachments before filling missing genes or inventory so saved state takes precedence.
         VillagerGeneticAttributes.apply(this);
         this.seedStartingInventoryIfAbsent();
     }
@@ -648,22 +623,18 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         super.tick();
 
         if (!this.level().isClientSide()) {
-            // Server side
             this.tickHunger();
             this.tickSooty();
             this.tickOwnedLantern();
             this.bubbleService().tick(this, this.level().getGameTime());
         } else {
-            // Client side
             this.restockReaction.tickClient(this);
             this.carriedPropConditions.tickClient(this);
         }
     }
 
     /**
-     * Vanilla player-trading restock (the daily offer refresh / trade-triggered level-up) -- distinct
-     * from the mod's own villager-to-villager emerald economy. Left to vanilla entirely; we only hang a
-     * cosmetic client reaction off it.
+     * Restocks player trade offers and triggers a cosmetic restock reaction.
      */
     @Override
     public void restock() {
@@ -726,6 +697,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         super.customServerAiStep();
 
         this.settlementsBrain.postVanillaAiStep();
+        // Evaluate social cues after the brain so channel occupancy reflects this tick's plan behavior.
         this.tickSocialCue(server);
 
         if (cognitionEnabled) {
@@ -758,9 +730,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Advances the SocialCue lane
-     * <p>
-     * Runs after the brain so the arbiter sees the freshest channel occupancy from the plan lane
+     * Advances this villager's social cues.
      */
     private void tickSocialCue(@Nonnull ServerComponent server) {
         server.socialCueArbiter().tick(this, this.socialCueRuntimeState, this.level().getGameTime());
@@ -781,12 +751,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Processes crash-orphaned teardown obligations on a throttled cadence.
-     * <p>
-     * Each pass iterates only obligations whose target chunk is currently loaded,
-     * deferring unloaded ones rather than counting them as failed attempts. This prevents
-     * the circuit breaker from triggering on obligations that are simply waiting for a distant
-     * chunk to load.
+     * Retries orphaned teardown obligations on a throttled cadence, deferring unloaded targets without counting failures.
      */
     private void tickReconciler() {
         if (!this.reconcilerCooldown.tickCheckAndReset(1)) {
@@ -807,7 +772,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             TeardownObligation obligation = entry.getObligation();
 
             if (!level.isLoaded(obligation.targetPos())) {
-                // Target's chunk is not loaded — defer without counting an attempt.
+                // Waiting for a chunk must not exhaust the cleanup retry limit.
                 continue;
             }
 
@@ -817,7 +782,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             }
 
             if (!obligation.stillValid(level)) {
-                // Target gone, replaced, or no longer ours — nothing to do.
                 ledger.resolveOrphan(obligation);
                 continue;
             }
@@ -829,7 +793,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             }
 
             if (!obligation.stillValid(level)) {
-                // Discharge took effect.
                 ledger.resolveOrphan(obligation);
             } else {
                 entry.incrementFailedAttempts();
@@ -855,7 +818,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Has an unassigned villager assigned to a settlement, or a member's membership verified, throttled to
+     * Attempts settlement assignment or validates existing membership, throttled to
      * {@link #MEMBERSHIP_CHECK_COOLDOWN_TICKS}.
      */
     private void tickMembershipCheck(@Nonnull ServerComponent server) {
@@ -871,7 +834,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Has a member meeting at its bell checked in at its settlement's gathering, throttled to
+     * Attempts to check this villager in at its settlement's gathering, throttled to
      * {@link #CHECK_IN_COOLDOWN_TICKS}.
      */
     private void tickCheckIn(@Nonnull ServerComponent server) {
@@ -900,18 +863,15 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     public void remove(@Nonnull RemovalReason reason) {
         ServerComponent server = this.level().isClientSide() ? null : SettlementsDagger.serverOrNull();
 
-        // Stop the running behavior before entity removal so TeardownScope obligations are discharged on death and
-        // discard. Chunk unload and dimension change call setRemoved directly, so they never reach this override.
-        // The chain is:
-        //   brain.stopAll → PlanRunnerBehavior.stop → planRunner.forceStop / overrideArbiter.forceStop → behavior.stop → teardownAll
-        // Must run before super.remove so the villager is still in the level when discharge resolves entities.
+        // Stop behaviors before removal so teardown can still resolve entities in this villager's level.
+        // Chunk unload and dimension change use setRemoved directly and bypass this cleanup.
         if (this.level() instanceof ServerLevel serverLevel) {
             this.getBrain().stopAll(serverLevel, this);
         }
 
         this.planRuntimeState.clearPendingGeneration();
 
-        // A villager about to be permanently removed leaves the name directory and its settlement's roster
+        // Preserve directory and roster entries for villagers that can return after a temporary unload.
         if (server != null && reason.shouldDestroy()) {
             server.villagerNameDirectory().remove(this.getUUID());
             // Drop the cache too: if this same instance is ever revived, onAddedToLevel must re-publish
@@ -919,7 +879,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             server.settlementMembershipService().recordRemoval(this, reason);
         }
 
-        // Prune cache
         if (server != null && shouldEvictServerScopeCaches(reason)) {
             server.dialogueProvider().evict(this.getUUID());
         }
@@ -928,7 +887,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Scatters a capped sample of the villager's Settlements inventory on death
+     * When enabled, scatters a capped sample of this villager's Settlements inventory in addition to vanilla death loot.
      */
     @Override
     protected void dropCustomDeathLoot(@Nonnull ServerLevel level, @Nonnull DamageSource damageSource, boolean recentlyHit) {
@@ -937,8 +896,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
 
         if (scatterInventory) {
             // The held and off-hand items are mirrored into the vanilla equipment slots, so clearing those
-            // slots here stops vanilla's chance-based equipment drop from duplicating the items we drop
-            // deterministically below.
+            // slots here stops vanilla's equipment drop from duplicating the inventory drops below.
             this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             this.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
         }
@@ -960,22 +918,12 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Narrows the drained inventory down to the stacks that actually should be dropped.
-     * <p>
-     * The Settlements backpack is unbounded, so a long-lived villager can hoard enough stacks that scattering
-     * all of them spawns hundreds of item entities in a single tick and takes the server down with it. Two
-     * filters apply, in order:
-     * <ol>
-     *     <li>The starting bread grant is withheld. Every villager is seeded with it, so returning it on death
-     *     would mint bread into the world with each generation; only the surplus a villager actually gathered
-     *     is eligible to drop.</li>
-     *     <li>Whatever survives is sampled down to {@link #MAX_DEATH_DROP_STACKS}. The sample is uniform and
-     *     without replacement, so the drop is neither biased toward whichever kinds the ledger happens to
-     *     enumerate first nor able to duplicate a stack the villager never carried.</li>
-     * </ol>
+     * Returns a uniform sample without replacement of at most {@link #MAX_DEATH_DROP_STACKS} stacks after withholding
+     * the starting bread grant. Does not modify the input list or its stacks.
      */
     private List<ItemStack> selectDeathDrops(@Nonnull List<ItemStack> drained) {
         List<ItemStack> droppable = new ArrayList<>(drained.size());
+        // Withhold the starting grant so breeding and killing villagers cannot create bread
         int breadToWithhold = STARTING_BREAD_STACKS * STARTING_BREAD_PER_STACK;
 
         for (ItemStack stack : drained) {
@@ -991,11 +939,12 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
             }
         }
 
+        // Bound the item entities spawned in one tick even when an unbounded inventory has accumulated many stacks
         if (droppable.size() <= MAX_DEATH_DROP_STACKS) {
             return droppable;
         }
 
-        // Partial Fisher-Yates: only the prefix we keep has to be shuffled into place.
+        // Partial Fisher-Yates avoids bias toward the inventory's iteration order without shuffling discarded stacks
         for (int i = 0; i < MAX_DEATH_DROP_STACKS; i++) {
             Collections.swap(droppable, i, i + this.random.nextInt(droppable.size() - i));
         }
@@ -1004,7 +953,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Vanilla hook, also invoked directly on a profession change.
+     * Stops active brain behaviors and resets this villager's plan state before installing fresh brain goals.
      */
     @Override
     public void refreshBrain(@Nonnull ServerLevel level) {
@@ -1018,7 +967,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Also has a member that grew up recorded as an adult on its settlement's roster.
+     * Updates age-dependent state and records a loaded member's transition to adulthood on its settlement's roster.
      */
     @Override
     protected void ageBoundaryReached() {
@@ -1065,12 +1014,11 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Core components copied from parent class
+     * Installs this villager's age-appropriate activities and schedule.
      */
     private void registerBrainGoals(Brain<Villager> brain) {
         VillagerProfession profession = this.getVillagerData().getProfession();
 
-        // Register core activity
         List<Pair<Integer, ? extends BehaviorControl<? super Villager>>> corePackage = new ArrayList<>(
                 VanillaBehaviorPackages.getCorePackage(profession, this.navigationManager.speedFor(NavigationType.STROLL)));
         if (!this.isBaby()) {
@@ -1081,14 +1029,12 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         }
         brain.addActivity(Activity.CORE, ImmutableList.copyOf(corePackage));
 
-        // Register work or play activities
         if (this.isBaby()) {
             this.registerBabyBrainGoals(brain, profession);
         } else {
             this.registerAdultAmbientBrainGoals(brain, profession);
         }
 
-        // Register other activities
         brain.addActivity(ActivityRegistry.COMBAT, ImmutableList.of()); // Empty: the fight runs in the override lane, outside the brain
         brain.addActivity(Activity.PANIC, VanillaBehaviorPackages.getPanicPackage(profession, this.navigationManager.speedFor(NavigationType.SPRINT)));
         brain.addActivity(Activity.PRE_RAID, VanillaBehaviorPackages.getPreRaidPackage(profession, this.navigationManager.speedFor(NavigationType.RUN)));
@@ -1096,10 +1042,9 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         brain.addActivity(ActivityRegistry.RAID_CELEBRATE, VanillaBehaviorPackages.getRaidCelebratePackage(this.navigationManager.speedFor(NavigationType.RUN)));
         brain.addActivity(Activity.HIDE, VanillaBehaviorPackages.getHidePackage(profession, this.navigationManager.speedFor(NavigationType.RUN)));
 
-        // Core activities must be configured before the first setActiveActivityIfPossible call
+        // Activating an activity snapshots the core set, so configure it before the first activation.
         brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
 
-        // Set schedule
         if (this.isBaby()) {
             brain.setSchedule(Schedule.VILLAGER_BABY);
             brain.setDefaultActivity(Activity.IDLE);
@@ -1114,7 +1059,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
 
     private void registerBabyBrainGoals(Brain<Villager> brain,
                                         VillagerProfession profession) {
-        // Babies stay on the vanilla schedule
         brain.addActivity(Activity.IDLE, VanillaBehaviorPackages.getIdlePackage(this.navigationManager.speedFor(NavigationType.STROLL)));
         brain.addActivity(Activity.PLAY, VanillaBehaviorPackages.getPlayPackage(this.navigationManager.speedFor(NavigationType.RUN)));
         brain.addActivityWithConditions(Activity.MEET, VanillaBehaviorPackages.getMeetPackage(profession, this.navigationManager.speedFor(NavigationType.WALK)),
@@ -1207,7 +1151,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * This villager's animation state, built lazily.
+     * Returns this villager's client animation state, creating it with factory on first access.
      */
     @ClientSide
     public VillagerAnimator getAnimator(@Nonnull VillagerAnimatorFactory factory) {
@@ -1243,11 +1187,10 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Deliberately distinct from the {@code shouldDestroy()} gate: {@code shouldSave()}
-     * is also true for {@code UNLOADED_TO_CHUNK}, so reusing this predicate for the name directory
-     * would erase a villager's name every time a player simply flies out of render distance.
+     * Returns whether entity removal invalidates this villager's server-scope caches.
      */
     private static boolean shouldEvictServerScopeCaches(@Nonnull RemovalReason reason) {
+        // Chunk unload invalidates caches without permanently removing the villager from the name directory.
         return reason == RemovalReason.KILLED
                 || reason == RemovalReason.DISCARDED
                 || reason.shouldSave();
@@ -1279,7 +1222,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
 
     @Override
     protected void pickUpItem(@Nonnull ItemEntity itemEntity) {
-        // Vanilla pickup method, route it to the custom inventory
         this.pickUp(itemEntity);
     }
 
@@ -1296,8 +1238,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
 
         // TODO: check that no behaviors are running
 
-        // Trading partner scans need one canonical availability predicate so session ownership rules
-        // stay consistent instead of drifting across multiple call sites.
         return SettlementsDagger.serverOrThrow()
                 .tradeSessionRegistry()
                 .getActiveSession(this.getUUID())
@@ -1369,11 +1309,10 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
                 MemoryModuleType.WALK_TARGET,
                 MemoryModuleType.LOOK_TARGET,
                 MemoryModuleType.INTERACTION_TARGET,
-                // TODO: BREED_TARGET is never set. It remains because for some reason LocateHidingPlace needs it
+                // Required by LocateHidingPlace even when no breeding target is stored.
                 MemoryModuleType.BREED_TARGET,
                 MemoryModuleType.PATH,
-                // Retained for vanilla brain compat; no longer written -- our InteractWithBarriers
-                // behavior tracks traversed doors and gates in BARRIERS_TO_CLOSE instead.
+                // Keep the vanilla slot registered for compatibility; barrier tracking uses BARRIERS_TO_CLOSE.
                 MemoryModuleType.DOORS_TO_CLOSE,
                 MemoryModuleType.NEAREST_BED,
                 MemoryModuleType.HURT_BY_ENTITY,
@@ -1387,8 +1326,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
                 MemoryModuleType.LAST_WORKED_AT_POI,
                 MemoryModuleType.GOLEM_DETECTED_RECENTLY,
 
-                // Custom vanilla-compatible memory module types
-                // Settlements-specific memories don't need to be registered here
+                // Register custom memories used through the vanilla Brain API.
                 MemoryTypeRegistry.BARRIERS_TO_CLOSE.getModuleType(),
                 MemoryTypeRegistry.INTERACT_TARGET.getModuleType(),
                 MemoryTypeRegistry.PLAN_BEHAVIOR_ACTIVE.getModuleType(),

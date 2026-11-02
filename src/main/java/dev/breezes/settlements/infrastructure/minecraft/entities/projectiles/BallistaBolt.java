@@ -8,11 +8,8 @@ import dev.breezes.settlements.domain.tags.SettlementsEntityTypeTags;
 import dev.breezes.settlements.domain.time.ClockTicks;
 import dev.breezes.settlements.infrastructure.minecraft.mixins.AbstractArrowInvoker;
 import dev.breezes.settlements.shared.util.RandomUtil;
-import dev.breezes.settlements.shared.util.SyncedDataWrapper;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.projectile.AbstractArrow;
@@ -48,15 +45,8 @@ public class BallistaBolt extends AbstractArrow {
 
     /**
      * Whether this bolt passes through villager allies instead of striking them.
-     * <p>
-     * Synced because hit detection also runs on the client, where a bolt that thinks it struck an ally slows to a
-     * crawl until the server's position corrects it.
      */
-    private static final SyncedDataWrapper<Boolean> DATA_SPARES_VILLAGER_ALLIES = SyncedDataWrapper.<Boolean>builder()
-            .entityClass(BallistaBolt.class)
-            .serializer(EntityDataSerializers.BOOLEAN)
-            .defaultValue(false)
-            .build();
+    private boolean sparesVillagerAllies;
 
     // Holds until the first flight tick; never saved, since a reloaded bolt is long past it
     private boolean freshlyFired;
@@ -73,18 +63,12 @@ public class BallistaBolt extends AbstractArrow {
                         @Nonnull ItemStack ammunition,
                         boolean sparesVillagerAllies) {
         super(EntityRegistry.BALLISTA_BOLT.get(), tip.x, tip.y, tip.z, level, ammunition, null);
-        DATA_SPARES_VILLAGER_ALLIES.set(this.entityData, sparesVillagerAllies);
+        this.sparesVillagerAllies = sparesVillagerAllies;
         this.pickup = Pickup.ALLOWED;
         this.freshlyFired = true;
 
         // Infinite pierce by design
         ((AbstractArrowInvoker) this).invokeSetPierceLevel(Byte.MAX_VALUE);
-    }
-
-    @Override
-    protected void defineSynchedData(@Nonnull SynchedEntityData.Builder builder) {
-        super.defineSynchedData(builder);
-        DATA_SPARES_VILLAGER_ALLIES.define(builder);
     }
 
     @Override
@@ -115,8 +99,7 @@ public class BallistaBolt extends AbstractArrow {
 
     @Override
     protected boolean canHitEntity(@Nonnull Entity target) {
-        boolean sparedAlly = DATA_SPARES_VILLAGER_ALLIES.get(this.entityData)
-                && target.getType().is(SettlementsEntityTypeTags.VILLAGER_ALLIES);
+        boolean sparedAlly = this.sparesVillagerAllies && target.getType().is(SettlementsEntityTypeTags.VILLAGER_ALLIES);
         // The bolt will 'fly through' the entity if this returns false
         return super.canHitEntity(target) && !sparedAlly;
     }
@@ -124,6 +107,10 @@ public class BallistaBolt extends AbstractArrow {
     @Override
     @Nullable
     protected EntityHitResult findHitEntity(@Nonnull Vec3 start, @Nonnull Vec3 end) {
+        // Only the server resolves entity hits: a hurt always fails on the client, and vanilla slows an arrow whose hurt fails
+        if (this.level().isClientSide()) {
+            return null;
+        }
         if (!this.freshlyFired) {
             return super.findHitEntity(start, end);
         }
@@ -159,13 +146,13 @@ public class BallistaBolt extends AbstractArrow {
     @Override
     public void addAdditionalSaveData(@Nonnull CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        tag.putBoolean(NBT_SPARES_VILLAGER_ALLIES, DATA_SPARES_VILLAGER_ALLIES.get(this.entityData));
+        tag.putBoolean(NBT_SPARES_VILLAGER_ALLIES, this.sparesVillagerAllies);
     }
 
     @Override
     public void readAdditionalSaveData(@Nonnull CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        DATA_SPARES_VILLAGER_ALLIES.set(this.entityData, tag.getBoolean(NBT_SPARES_VILLAGER_ALLIES));
+        this.sparesVillagerAllies = tag.getBoolean(NBT_SPARES_VILLAGER_ALLIES);
     }
 
     @Override

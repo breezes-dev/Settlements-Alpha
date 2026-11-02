@@ -15,15 +15,20 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Active villager trade sessions and pending invitations, with phase-specific timeouts.
+ */
 @ServerScope
 @CustomLog
 public final class TradeSessionRegistry {
 
     /**
-     * How long an initiator has to reach its partner.
-     * A session still in its approach phase closes a short slack after.
+     * Maximum approach duration, excluding the registry's timeout slack.
      */
     public static final ClockTicks MAX_APPROACH_DURATION = ClockTicks.seconds(10);
+
+    // Allow the visual exchange and its completion outcome before timing out a settled deal.
+    private static final ClockTicks MAX_DEAL_DURATION = ClockTicks.seconds(10);
 
     private static final int DEADLINE_SLACK_TICKS = ClockTicks.seconds(2).getTicksAsInt();
 
@@ -130,9 +135,8 @@ public final class TradeSessionRegistry {
     public void tickTimeouts(long currentGameTime) {
         this.invitesByTarget.entrySet().removeIf(entry -> entry.getValue().expireGameTime() < currentGameTime);
 
-        // Sessions are double-keyed by participant so callers get O(1) lookups from either villager.
-        // Timeout evaluation must deduplicate by sessionId first, or the same session would be closed twice.
-        // TODO: this is allocated per tick, consider using cache
+        // Both participant entries can refer to the same session, so evaluate its timeout only once.
+        // TODO: reuse the deduplication set to avoid allocating it on every timeout tick.
         Set<UUID> seenSessionIds = new HashSet<>();
         for (TradeSession session : this.activeSessionsByParticipant.values()) {
             if (!seenSessionIds.add(session.getSessionId())) {
@@ -160,7 +164,7 @@ public final class TradeSessionRegistry {
             case NEGOTIATING ->
                     (this.tradingConfig.negotiationRoundDuration().getTicks() * 2L * this.tradingConfig.maxNegotiationRounds())
                             + DEADLINE_SLACK_TICKS;
-            case DEAL -> this.tradingConfig.dealDuration().getTicks() + DEADLINE_SLACK_TICKS;
+            case DEAL -> MAX_DEAL_DURATION.getTicks() + DEADLINE_SLACK_TICKS;
             case WALK_AWAY -> this.tradingConfig.walkawayDuration().getTicks() + DEADLINE_SLACK_TICKS;
             case EXTERNAL_CANCEL, CLOSED -> -1L;
         };

@@ -7,6 +7,7 @@ import dev.breezes.settlements.domain.animation.StatelessVillagerAnimator;
 import dev.breezes.settlements.domain.animation.VillagerAnimationObservation;
 import dev.breezes.settlements.domain.animation.VillagerAnimationSnapshot;
 import dev.breezes.settlements.domain.animation.VillagerAnimator;
+import dev.breezes.settlements.domain.entities.VillagerProfessionKey;
 import dev.breezes.settlements.domain.inventory.EquipmentSlot;
 import dev.breezes.settlements.domain.presentation.ItemCategory;
 import dev.breezes.settlements.infrastructure.minecraft.attachments.EquipmentLookup;
@@ -86,6 +87,7 @@ public final class VillagerAnimationRenderAdapter implements SettlementsVillager
         observation.setSleeping(villager.isSleeping());
         observation.setUnhappy(villager.getUnhappyCounter() > 0);
         observation.setUpsideDown(LivingEntityRenderer.isEntityUpsideDown(villager));
+        observation.setNitwit(VillagerProfessionKey.NITWIT.equals(villager.getProfession()));
     }
 
     /**

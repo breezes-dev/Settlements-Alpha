@@ -4,7 +4,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import dev.breezes.settlements.infrastructure.config.factory.ConfigFactory;
 import dev.breezes.settlements.infrastructure.minecraft.behavior.ambient.AmbientBehaviors;
+import dev.breezes.settlements.infrastructure.minecraft.behavior.ambient.VillagePoiBoundBehaviors;
+import dev.breezes.settlements.infrastructure.minecraft.behavior.ambient.VillagePoiBoundConfig;
 import dev.breezes.settlements.infrastructure.minecraft.behavior.home.ValidateNearbyHome;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
@@ -19,7 +22,6 @@ import net.minecraft.world.entity.ai.behavior.RunOne;
 import net.minecraft.world.entity.ai.behavior.SetClosestHomeAsWalkTarget;
 import net.minecraft.world.entity.ai.behavior.SetLookAndInteract;
 import net.minecraft.world.entity.ai.behavior.SetWalkTargetFromBlockMemory;
-import net.minecraft.world.entity.ai.behavior.SetWalkTargetFromLookTarget;
 import net.minecraft.world.entity.ai.behavior.ShowTradesToPlayer;
 import net.minecraft.world.entity.ai.behavior.SleepInBed;
 import net.minecraft.world.entity.ai.behavior.SocializeAtBell;
@@ -29,7 +31,6 @@ import net.minecraft.world.entity.ai.behavior.StrollToPoiList;
 import net.minecraft.world.entity.ai.behavior.TradeWithVillager;
 import net.minecraft.world.entity.ai.behavior.TriggerGate;
 import net.minecraft.world.entity.ai.behavior.ValidateNearbyPoi;
-import net.minecraft.world.entity.ai.behavior.VillageBoundRandomStroll;
 import net.minecraft.world.entity.ai.behavior.WorkAtComposter;
 import net.minecraft.world.entity.ai.behavior.WorkAtPoi;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -44,8 +45,8 @@ import java.util.List;
 public final class VanillaAmbientBehaviorPackages {
 
     /**
-     * How close an adult's meet walk brings it to its meeting point, as a Manhattan distance in blocks between the
-     * villager's block position and the meeting point's.
+     * Arrival tolerance for an adult's meeting-point walk, measured as Manhattan distance in blocks between block
+     * positions.
      */
     public static final int MEET_WALK_CLOSE_ENOUGH_DISTANCE = 6;
 
@@ -126,12 +127,13 @@ public final class VanillaAmbientBehaviorPackages {
                         GateBehavior.RunningPolicy.RUN_ONE, ImmutableList.of(Pair.of(new TradeWithVillager(), 1)))))
         ));
 
+        int maxPoiDistanceBlocks = ConfigFactory.create(VillagePoiBoundConfig.class).maxPoiDistanceBlocks();
         ArrayList<Pair<? extends BehaviorControl<? super Villager>, Integer>> idleChoiceBehaviors = new ArrayList<>();
         idleChoiceBehaviors.addAll(List.of(
                 Pair.of(InteractWith.of(EntityType.VILLAGER, 8, MemoryModuleType.INTERACTION_TARGET, speed, 2), 2),
                 Pair.of(InteractWith.of(EntityType.CAT, 8, MemoryModuleType.INTERACTION_TARGET, speed, 2), 1),
-                Pair.of(VillageBoundRandomStroll.create(speed), 1),
-                Pair.of(SetWalkTargetFromLookTarget.create(speed, 2), 1),
+                Pair.of(VillagePoiBoundBehaviors.randomStroll(speed, maxPoiDistanceBlocks), 1),
+                Pair.of(VillagePoiBoundBehaviors.walkToLookTarget(speed, 2, maxPoiDistanceBlocks), 1),
                 Pair.of(new JumpOnBed(speed), 1),
                 Pair.of(new DoNothing(30, 60), 1)
         ));

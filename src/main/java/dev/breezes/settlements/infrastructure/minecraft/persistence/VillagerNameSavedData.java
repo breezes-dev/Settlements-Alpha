@@ -1,5 +1,6 @@
 package dev.breezes.settlements.infrastructure.minecraft.persistence;
 
+import dev.breezes.settlements.domain.ai.naming.VillagerNamePool;
 import dev.breezes.settlements.domain.ai.naming.VillagerNameTable;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -15,11 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Thin serialization shell around {@link VillagerNameTable}.
- * <p>
- * All map logic lives on the table; this class only knows how to turn it into NBT and
- * back, and to forward {@code setDirty()} to the engine when the table reports that a
- * call actually changed its content.
+ * Persists current villager names and marks changed entries for saving.
  */
 public final class VillagerNameSavedData extends SavedData {
 
@@ -71,8 +68,8 @@ public final class VillagerNameSavedData extends SavedData {
         return new VillagerNameSavedData(new VillagerNameTable(namesByUuid));
     }
 
-    public String resolve(@Nonnull UUID uuid) {
-        return this.table.resolve(uuid);
+    public String resolve(@Nonnull UUID uuid, @Nonnull VillagerNamePool pool) {
+        return this.table.resolve(uuid, pool);
     }
 
     public void upsert(@Nonnull UUID uuid, @Nonnull String name) {

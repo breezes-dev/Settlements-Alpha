@@ -21,8 +21,13 @@ final class BrowReaction {
     static final float RAISED_OFFSET_LIMIT = -1.5F;
     static final float LOWERED_OFFSET_LIMIT = 0.5F;
 
-    // The highest offset procedural brow motion may raise the brow to; it never raises an authored brow already higher
+    // The highest offset procedural brow motion may raise the brow to, on a villager other than a nitwit; it never
+    // raises an authored brow already higher
     static final float PROCEDURAL_RAISE_LIMIT = -0.8F;
+
+    // How many times further a nitwit's brow reacts than another villager's to the same look residual, and how many
+    // times higher procedural brow motion may raise it, within the same final bounds
+    static final float NITWIT_REACTION_SCALE = 2.0F;
 
     // Widest final brow roll either way, in radians.
     static final float MAX_ROLL_RADIANS = 20.0F * Mth.DEG_TO_RAD;
@@ -55,16 +60,25 @@ final class BrowReaction {
 
     /**
      * Adds the weight-scaled reaction to the pose's brow within limit. Then bounds the brow's final vertical
-     * offset and roll regardless of weight. Lowering and roll are not limited against the authored brow.
+     * offset and roll regardless of weight. Lowering and roll are not limited against the authored brow. A nitwit's
+     * reaction and procedural raise limit are scaled by {@link #NITWIT_REACTION_SCALE}; its final bounds are not.
      *
      * @param pose           pose on the villager rig; not validated
      * @param weight         fraction of the reaction to add, in [0, 1]; not validated
      * @param authoredOffset the brow's vertical offset before any procedural brow motion was added to the pose
      */
-    void apply(@Nonnull AnimationPose pose, float weight, float authoredOffset) {
-        float composedOffset = pose.get(BROW_TRANSLATION, VERTICAL_AXIS) + weight * this.offset.getValue();
-        float finalOffset = Math.max(composedOffset, Math.min(authoredOffset, PROCEDURAL_RAISE_LIMIT));
-        float finalRoll = pose.get(BROW_ROTATION, ROLL_AXIS) + weight * this.roll.getValue();
+    void apply(@Nonnull AnimationPose pose,
+               float weight,
+               float authoredOffset,
+               @Nonnull VillagerAnimationObservation observation) {
+        float reactionScale = observation.isNitwit() ? NITWIT_REACTION_SCALE : 1.0F;
+        // The final bounds stay unscaled because a lower or further rolled brow would cover more of the eyes; they
+        // also cap a scaled procedural raise limit that passes the raised offset limit
+        float proceduralRaiseLimit = reactionScale * PROCEDURAL_RAISE_LIMIT;
+        float composedOffset = pose.get(BROW_TRANSLATION, VERTICAL_AXIS)
+                + weight * reactionScale * this.offset.getValue();
+        float finalOffset = Math.max(composedOffset, Math.min(authoredOffset, proceduralRaiseLimit));
+        float finalRoll = pose.get(BROW_ROTATION, ROLL_AXIS) + weight * reactionScale * this.roll.getValue();
         pose.set(BROW_TRANSLATION, VERTICAL_AXIS, Math.clamp(finalOffset, RAISED_OFFSET_LIMIT, LOWERED_OFFSET_LIMIT));
         pose.set(BROW_ROTATION, ROLL_AXIS, Math.clamp(finalRoll, -MAX_ROLL_RADIANS, MAX_ROLL_RADIANS));
     }

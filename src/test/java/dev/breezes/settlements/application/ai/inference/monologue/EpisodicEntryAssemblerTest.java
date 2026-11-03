@@ -4,7 +4,7 @@ import dev.breezes.settlements.application.ai.inference.InferenceConfig;
 import dev.breezes.settlements.domain.ai.knowledge.KnowledgeEntry;
 import dev.breezes.settlements.domain.ai.knowledge.VillagerKnowledgeStore;
 import dev.breezes.settlements.domain.ai.memory.PackedPos;
-import dev.breezes.settlements.domain.ai.naming.VillagerNameTable;
+import dev.breezes.settlements.domain.ai.naming.VillagerNameDirectory;
 import dev.breezes.settlements.domain.ai.observation.ObservationMetadataKeys;
 import dev.breezes.settlements.domain.ai.observation.ObservationType;
 import dev.breezes.settlements.domain.ai.worldevent.EventOutcome;
@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,13 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-/**
- * Unit tests for {@link EpisodicEntryAssembler}.
- * <p>
- * Uses a real {@link VillagerNameTable} (pure, deterministic) and hand-built
- * {@link KnowledgeEntry} objects. No Minecraft types are involved.
- */
 class EpisodicEntryAssemblerTest {
 
     private static final UUID OBSERVER_ID = UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001");
@@ -43,13 +40,13 @@ class EpisodicEntryAssemblerTest {
      */
     private static final int MAX_EPISODIC_ENTRIES = 24;
 
-    private VillagerNameTable nameDirectory;
+    private VillagerNameDirectory nameDirectory;
     private EpisodicEntryAssembler assembler;
     private VillagerKnowledgeStore store;
 
     @BeforeEach
     void setUp() {
-        this.nameDirectory = new VillagerNameTable();
+        this.nameDirectory = mock(VillagerNameDirectory.class);
         this.assembler = new EpisodicEntryAssembler(this.nameDirectory, inferenceConfigWithCap(MAX_EPISODIC_ENTRIES));
         this.store = new VillagerKnowledgeStore();
     }
@@ -151,6 +148,7 @@ class EpisodicEntryAssemblerTest {
     void assemble_participant_actorFieldIsNull() {
         // Arrange — PARTICIPANT perspective: actor name must be null (SIS renders "I")
         this.store.admit(directEntry(OBSERVER_ID, null, WorldEventType.RESOURCE_HARVESTED, 2.0f));
+        when(this.nameDirectory.resolve(OBSERVER_ID)).thenReturn("Observer Maren");
 
         // Act
         List<EpisodicEntryDTO> result = this.assembler.assemble(OBSERVER_ID, this.store, CURRENT_TICK);
@@ -164,7 +162,8 @@ class EpisodicEntryAssemblerTest {
     void assemble_bystander_actorFieldIsResolvedName() {
         // Arrange
         this.store.admit(directEntry(ACTOR_ID, null, WorldEventType.RESOURCE_HARVESTED, 2.0f));
-        String expectedActorName = this.nameDirectory.resolve(ACTOR_ID);
+        String expectedActorName = "Witnessed Farmer";
+        when(this.nameDirectory.resolve(ACTOR_ID)).thenReturn(expectedActorName);
 
         // Act
         List<EpisodicEntryDTO> result = this.assembler.assemble(OBSERVER_ID, this.store, CURRENT_TICK);
@@ -178,7 +177,8 @@ class EpisodicEntryAssemblerTest {
     void assemble_tradeCompleted_targetFieldIsResolvedName() {
         // Arrange — TRADE_COMPLETED: relatedEntity is the trading partner
         this.store.admit(directEntry(ACTOR_ID, TARGET_ID, WorldEventType.TRADE_COMPLETED, 2.5f));
-        String expectedTargetName = this.nameDirectory.resolve(TARGET_ID);
+        String expectedTargetName = "Trading Partner";
+        when(this.nameDirectory.resolve(TARGET_ID)).thenReturn(expectedTargetName);
 
         // Act
         List<EpisodicEntryDTO> result = this.assembler.assemble(OBSERVER_ID, this.store, CURRENT_TICK);
@@ -192,7 +192,8 @@ class EpisodicEntryAssemblerTest {
     void assemble_courtshipChildBirth_targetFieldIsResolvedName() {
         // Arrange — COURTSHIP_CHILD_BIRTH: relatedEntity is the courtship partner
         this.store.admit(directEntry(ACTOR_ID, TARGET_ID, WorldEventType.COURTSHIP_CHILD_BIRTH, 2.5f));
-        String expectedTargetName = this.nameDirectory.resolve(TARGET_ID);
+        String expectedTargetName = "Childbirth Partner";
+        when(this.nameDirectory.resolve(TARGET_ID)).thenReturn(expectedTargetName);
 
         // Act
         List<EpisodicEntryDTO> result = this.assembler.assemble(OBSERVER_ID, this.store, CURRENT_TICK);
@@ -206,7 +207,8 @@ class EpisodicEntryAssemblerTest {
     void assemble_courtshipDateCompleted_targetFieldIsResolvedName() {
         // Arrange — COURTSHIP_DATE_COMPLETED: relatedEntity is the date partner (childless date)
         this.store.admit(directEntry(ACTOR_ID, TARGET_ID, WorldEventType.COURTSHIP_DATE_COMPLETED, 2.5f));
-        String expectedTargetName = this.nameDirectory.resolve(TARGET_ID);
+        String expectedTargetName = "Date Partner";
+        when(this.nameDirectory.resolve(TARGET_ID)).thenReturn(expectedTargetName);
 
         // Act
         List<EpisodicEntryDTO> result = this.assembler.assemble(OBSERVER_ID, this.store, CURRENT_TICK);
@@ -220,7 +222,8 @@ class EpisodicEntryAssemblerTest {
     void assemble_emeraldsDonated_targetFieldIsResolvedName() {
         // Arrange — EMERALDS_DONATED: relatedEntity is the donation recipient
         this.store.admit(directEntry(ACTOR_ID, TARGET_ID, WorldEventType.EMERALDS_DONATED, 2.5f));
-        String expectedTargetName = this.nameDirectory.resolve(TARGET_ID);
+        String expectedTargetName = "Donation Recipient";
+        when(this.nameDirectory.resolve(TARGET_ID)).thenReturn(expectedTargetName);
 
         // Act
         List<EpisodicEntryDTO> result = this.assembler.assemble(OBSERVER_ID, this.store, CURRENT_TICK);
@@ -234,7 +237,8 @@ class EpisodicEntryAssemblerTest {
     void assemble_courtshipRejected_targetFieldIsResolvedName() {
         // Arrange — COURTSHIP_REJECTED: relatedEntity is the spurned presenter
         this.store.admit(directEntry(ACTOR_ID, TARGET_ID, WorldEventType.COURTSHIP_REJECTED, 2.5f));
-        String expectedTargetName = this.nameDirectory.resolve(TARGET_ID);
+        String expectedTargetName = "Rejected Presenter";
+        when(this.nameDirectory.resolve(TARGET_ID)).thenReturn(expectedTargetName);
 
         // Act
         List<EpisodicEntryDTO> result = this.assembler.assemble(OBSERVER_ID, this.store, CURRENT_TICK);
@@ -248,6 +252,7 @@ class EpisodicEntryAssemblerTest {
     void assemble_resourceHarvested_targetFieldIsNullEvenWithRelatedEntity() {
         // Arrange — RESOURCE_HARVESTED: relatedEntity might be set but is not a nameable person
         this.store.admit(directEntry(ACTOR_ID, TARGET_ID, WorldEventType.RESOURCE_HARVESTED, 2.0f));
+        when(this.nameDirectory.resolve(TARGET_ID)).thenReturn("Unrelated Villager");
 
         // Act
         List<EpisodicEntryDTO> result = this.assembler.assemble(OBSERVER_ID, this.store, CURRENT_TICK);
@@ -511,8 +516,9 @@ class EpisodicEntryAssemblerTest {
                                                            float weight,
                                                            @Nullable UUID targetId) {
         Map<String, String> metadata = buildMetadata(actorId, eventType);
+        String identity = actorId + ":" + eventType.name() + ":" + admitTick + ":" + weight + ":" + targetId;
         return KnowledgeEntry.fromDirectObservation(
-                UUID.randomUUID(), ObservationType.SOCIAL,
+                UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8)), ObservationType.SOCIAL,
                 admitTick, admitTick, targetId, metadata, weight, null);
     }
 

@@ -16,6 +16,7 @@ import dev.breezes.settlements.infrastructure.minecraft.data.history.HistoryEven
 import dev.breezes.settlements.infrastructure.minecraft.data.mason.ExcavateSubstrateYieldDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.mining.OreRegenDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.naming.SettlementNamePoolDataManager;
+import dev.breezes.settlements.infrastructure.minecraft.data.naming.VillagerNamePoolDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.scavenge.ScavengeYieldDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.scoring.TraitScorerDataManager;
 import dev.breezes.settlements.infrastructure.minecraft.data.smelting.BlastOreRecipeDataManager;
@@ -81,6 +82,12 @@ public final class DataManagerModule {
     @Singleton
     static SettlementNamePoolDataManager settlementNamePoolDataManager() {
         return new SettlementNamePoolDataManager();
+    }
+
+    @Provides
+    @Singleton
+    static VillagerNamePoolDataManager villagerNamePoolDataManager() {
+        return new VillagerNamePoolDataManager();
     }
 
     @Provides

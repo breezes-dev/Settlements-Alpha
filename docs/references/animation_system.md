@@ -346,7 +346,8 @@ turn, a torso twist, or a root turn moves the head the look knows nothing about,
 still must not roll the nose while the look swings underneath. The roll bound applies to the final nose roll, authored
 roll included and under sleep too, so an authored roll past it would be clamped rather than drawn;
 [NoseLagTest](../../src/test/java/dev/breezes/settlements/domain/animation/NoseLagTest.java) sweeps every production
-clip's nose roll against it.
+clip's nose roll against it. A nitwit's nose rolls further for the same lag, and its bounds widen by the same factor, so
+the wider swing is not clamped back to another villager's.
 
 The **brow reaction** follows the look residual, described under [The drawn head](#the-drawn-head), and adds onto the
 brow at `BROW`'s remaining weight. A sideways residual rolls up the brow's end on the side the look lies toward and
@@ -367,7 +368,8 @@ The **brow bounds** limit the brow's final vertical offset to a range that keeps
 little past the widest authored roll, applied after the reaction whatever its weight, so they bound every brow source,
 under sleep too. [BrowReactionTest](../../src/test/java/dev/breezes/settlements/domain/animation/BrowReactionTest.java)
 sweeps every production clip's brow offset and roll against them, and every ambient brow clip's raise against the
-procedural raise limit.
+procedural raise limit. A nitwit's brow reacts further to the same residual, and its procedural raise limit rises by the
+same factor, but the brow bounds are the same for every villager.
 
 ### The drawn head
 
@@ -819,10 +821,11 @@ changing the system, cover the smallest relevant boundary:
   agreement within a stated tolerance across frame rates for a moving target, the heading wrap, jumps, and the
   upside-down flip;
 - the head trail on a fixed target under a turning body and at its clamp, the head frame under torso and root turns and
-  a forward lean with the head pitched back, and the nose lag's settling, snapping, suppression, and bound;
+  a forward lean with the head pitched back, and the nose lag's settling, snapping, suppression, bound, and nitwit
+  scale;
 - the look residual at zero on a settled look and carrying a head hold or a turn below the head, the brow reaction's
   direction, its rise and return across frame rates, its suppression without pausing, the procedural raise limit over
-  a neutral and an authored raise, and the brow bounds;
+  a neutral and an authored raise, the brow bounds, and the nitwit scale;
 - the pupils' mirrored rest by their eyes' inner edges, and the pupil containment per eye: the outer edge's stop, the
   inner and bottom edges' squashes and their minimum, the resolved size, the slide under the lid, and the bounds
   holding under sleep;

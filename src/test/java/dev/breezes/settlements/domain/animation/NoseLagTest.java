@@ -150,6 +150,46 @@ class NoseLagTest {
     }
 
     @Test
+    void lagRoll_ofANitwit_rollsFurtherThanAnotherVillagers_forTheSameTurn() {
+        // Arrange: one small turn of a nitwit's head and of another villager's
+        Lagging other = new Lagging().followHeadYaw(AGE_TICKS, 0.0F);
+        Lagging nitwit = Lagging.onANitwit().followHeadYaw(AGE_TICKS, 0.0F);
+
+        // Act
+        float otherRoll = other.followHeadYaw(AGE_TICKS + 1, SMALL_TURN_RADIANS).rollOver(0.0F, 1.0F);
+        float nitwitRoll = nitwit.followHeadYaw(AGE_TICKS + 1, SMALL_TURN_RADIANS).rollOver(0.0F, 1.0F);
+
+        // Assert: a lag that ignores the nitwit would roll both noses alike
+        assertTrue(otherRoll < -TOLERANCE, "the turn never rolled the other villager's nose");
+        assertTrue(nitwitRoll < otherRoll - TOLERANCE, "the nitwit's nose rolled no further: " + nitwitRoll);
+    }
+
+    @Test
+    void finalRoll_ofANitwit_passesAnotherVillagersBound_onATurnPastIt() {
+        // Arrange
+        Lagging nitwit = Lagging.onANitwit().followHeadYaw(AGE_TICKS, 0.0F);
+
+        // Act
+        float roll = nitwit.followHeadYaw(AGE_TICKS + 1, ExponentialFollower.TELEPORT_TURN_RADIANS - 0.05F)
+                .rollOver(0.0F, 1.0F);
+
+        // Assert: bounds left unscaled would clamp the nitwit's wider roll back to another villager's
+        assertTrue(roll < -NoseLag.MAX_ROLL_RADIANS - TOLERANCE, "the nitwit's nose stopped at that bound: " + roll);
+    }
+
+    @Test
+    void finalRoll_ofANitwit_staysWithinItsWiderBound_authoredRollIncluded() {
+        // Arrange: an authored roll past even the nitwit's bound, under no lag
+        float nitwitBound = NoseLag.NITWIT_ROLL_SCALE * NoseLag.MAX_ROLL_RADIANS;
+
+        // Act
+        float roll = Lagging.onANitwit().followHeadYaw(AGE_TICKS, 0.0F).rollOver(1.5F * nitwitBound, 1.0F);
+
+        // Assert: a nitwit's final roll left unbounded would draw the authored roll whole
+        assertEquals(nitwitBound, roll, TOLERANCE);
+    }
+
+    @Test
     void roll_ofASteadyTurn_agreesAcrossFrameRates_withinHalf() {
         // Arrange: half a second of a steady turn. A blend factor fixed per frame lags several times less at the
         // highest frame rate than at the lowest.
@@ -278,7 +318,21 @@ class NoseLagTest {
         private final NoseLag noseLag = new NoseLag();
         private final HeadFrame headFrame = new HeadFrame();
         private final FollowerStep step = new FollowerStep();
-        private VillagerAnimationObservation observation = observation(AGE_TICKS, 0.0F, 0.0F, false);
+        private final boolean nitwit;
+        private VillagerAnimationObservation observation;
+
+        Lagging() {
+            this(false);
+        }
+
+        private Lagging(boolean nitwit) {
+            this.nitwit = nitwit;
+            this.observation = observation(AGE_TICKS, 0.0F, 0.0F, false, nitwit);
+        }
+
+        static Lagging onANitwit() {
+            return new Lagging(true);
+        }
 
         /**
          * Follows an upright head at the given yaw in radians, with zero body heading and partial tick.
@@ -314,7 +368,7 @@ class NoseLagTest {
                                float bodyHeadingDegrees,
                                AnimationPose head,
                                boolean upsideDown) {
-            this.observation = observation(age, partialTicks, bodyHeadingDegrees, upsideDown);
+            this.observation = observation(age, partialTicks, bodyHeadingDegrees, upsideDown, this.nitwit);
             this.step.measure(age, partialTicks, false);
             this.headFrame.compose(head, this.observation);
             this.noseLag.follow(this.headFrame, this.observation, this.step);
@@ -324,12 +378,14 @@ class NoseLagTest {
         private static VillagerAnimationObservation observation(long age,
                                                                 float partialTicks,
                                                                 float bodyHeadingDegrees,
-                                                                boolean upsideDown) {
+                                                                boolean upsideDown,
+                                                                boolean nitwit) {
             return VillagerAnimationObservations.observation()
                     .ageTicks(age)
                     .partialTicks(partialTicks)
                     .bodyHeadingDegrees(bodyHeadingDegrees)
                     .upsideDown(upsideDown)
+                    .nitwit(nitwit)
                     .navigationType(NavigationType.STROLL)
                     .motionArchetype(AnimationArchetype.NONE)
                     .selectionContext(AnimationSelectionContext.generic())

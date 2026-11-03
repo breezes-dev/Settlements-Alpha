@@ -11,6 +11,7 @@ import dev.breezes.settlements.di.modules.FarmingModule;
 import dev.breezes.settlements.di.modules.ReloadListenerModule;
 import dev.breezes.settlements.di.modules.SettlementNamingModule;
 import dev.breezes.settlements.di.modules.SmeltingModule;
+import dev.breezes.settlements.di.modules.VillagerNamingModule;
 import dev.breezes.settlements.di.modules.WorldGenerationModule;
 import dev.breezes.settlements.domain.ai.eventlane.EventLaneConfig;
 import dev.breezes.settlements.domain.generation.pipeline.GenerationPipeline;
@@ -37,6 +38,7 @@ import java.util.Set;
         SmeltingModule.class,
         WorldGenerationModule.class,
         SettlementNamingModule.class,
+        VillagerNamingModule.class,
         ReloadListenerModule.class,
 })
 public interface SettlementsComponent {

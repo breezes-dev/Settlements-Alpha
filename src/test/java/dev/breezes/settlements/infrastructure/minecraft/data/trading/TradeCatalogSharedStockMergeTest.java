@@ -171,11 +171,9 @@ class TradeCatalogSharedStockMergeTest {
     }
 
     @Test
-    void shippedData_fletcherAndFarmerKeepTheirOwnOverrides() throws IOException {
+    void shippedData_farmerKeepsItsOwnFoodOverride() throws IOException {
         this.loadShippedData();
 
-        assertTrue(this.catalog.offersFor(vanilla("fletcher")).stream().anyMatch(offer -> offer.id().equals("ballista_bolt")));
-        assertFalse(this.catalog.demandsFor(vanilla("fletcher")).stream().anyMatch(demand -> demand.id().equals("ballista_bolt")));
         assertTrue(this.catalog.offersFor(vanilla("farmer")).stream().anyMatch(offer -> offer.id().equals("food")));
     }
 

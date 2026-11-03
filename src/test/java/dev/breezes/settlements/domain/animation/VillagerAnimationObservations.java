@@ -29,11 +29,12 @@ final class VillagerAnimationObservations {
                                                        boolean umbrellaRequested,
                                                        boolean lanternRequested,
                                                        boolean lanternCheckDecided,
-                                                       boolean handItemShown) {
+                                                       boolean handItemShown,
+                                                       boolean nitwit) {
         VillagerAnimationObservation observation = new VillagerAnimationObservation();
         copy(ageTicks, partialTicks, netHeadYawDegrees, headPitchDegrees, bodyHeadingDegrees, upsideDown, limbSwing,
                 limbSwingAmount, navigationType, motionArchetype, motionGeneration, selectionContext, sleeping, unhappy,
-                umbrellaRequested, lanternRequested, lanternCheckDecided, handItemShown, observation);
+                umbrellaRequested, lanternRequested, lanternCheckDecided, handItemShown, nitwit, observation);
         return observation;
     }
 
@@ -46,7 +47,7 @@ final class VillagerAnimationObservations {
                 source.getLimbSwing(), source.getLimbSwingAmount(), source.getNavigationType(),
                 source.getMotionArchetype(), source.getMotionGeneration(), source.getSelectionContext(),
                 source.isSleeping(), source.isUnhappy(), source.isUmbrellaRequested(), source.isLanternRequested(),
-                source.isLanternCheckDecided(), source.isHandItemShown(), target);
+                source.isLanternCheckDecided(), source.isHandItemShown(), source.isNitwit(), target);
     }
 
     private static void copy(long ageTicks,
@@ -67,6 +68,7 @@ final class VillagerAnimationObservations {
                              boolean lanternRequested,
                              boolean lanternCheckDecided,
                              boolean handItemShown,
+                             boolean nitwit,
                              VillagerAnimationObservation target) {
         target.setSampleKey(ageTicks, partialTicks);
         target.setLook(netHeadYawDegrees, headPitchDegrees);
@@ -82,6 +84,7 @@ final class VillagerAnimationObservations {
         target.setLanternRequested(lanternRequested);
         target.setLanternCheckDecided(lanternCheckDecided);
         target.setHandItemShown(handItemShown);
+        target.setNitwit(nitwit);
     }
 
 }

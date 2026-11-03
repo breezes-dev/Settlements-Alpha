@@ -4,22 +4,16 @@ import javax.annotation.Nonnull;
 import java.util.UUID;
 
 /**
- * Server-authoritative map from a villager's UUID to that villager's current display name.
+ * Server-authoritative directory of villagers' current display names, including unloaded villagers.
  * <p>
- * This directory answers a villager's "UUID -> current display name" from anywhere, anytime,
- * independent of whether that villager entity happens to be loaded right now.
- * <p>
- * Only living villagers are retained. A dead villager's entry is removed, keeping this
- * directory bounded instead of growing infinitely; resolving its UUID afterwards falls back
- * to the deterministic generator, so only a player-applied rename is lost with the entry.
- * <p>
- * Absence implies "never loaded." A UUID with no entry here has never been loaded on this
- * server and therefore cannot have been renamed.
+ * Stored names take precedence over generated fallbacks. Missing entries, including entries removed after death,
+ * resolve against the current datapack pool and may change when that pool changes. An empty pool falls back to the
+ * UUID string. Resolving a missing entry does not retain it.
  */
 public interface VillagerNameDirectory {
 
     /**
-     * Resolves {@code uuid}'s current display name.
+     * Resolves the UUID's stored display name or its current fallback.
      *
      * @param uuid the villager UUID; every caller is expected to hold a real villager identity,
      *             not merely a UUID it hasn't checked for null yet
@@ -27,12 +21,12 @@ public interface VillagerNameDirectory {
     String resolve(@Nonnull UUID uuid);
 
     /**
-     * Records {@code uuid}'s current display name, overwriting any previous entry.
+     * Records the UUID's current display name, overwriting any previous entry.
      */
     void upsert(@Nonnull UUID uuid, @Nonnull String name);
 
     /**
-     * Removes {@code uuid}'s entry.
+     * Removes the UUID's entry.
      * <p>
      * Only call this once the villager is actually gone for good -- never for a chunk unload.
      */

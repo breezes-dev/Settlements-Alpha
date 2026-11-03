@@ -177,6 +177,49 @@ class BrowReactionTest {
     }
 
     @Test
+    void reaction_ofANitwit_movesTheBrowFurtherThanAnotherVillagers_forTheSameLook() {
+        // Act: one slight sideways look, reacted to by a nitwit's brow and by another villager's
+        Reacting other = new Reacting().followLook(AGE_TICKS, 0.0F, SIDE_LOOK_DEGREES, 0.0F);
+        Reacting nitwit = Reacting.onANitwit().followLook(AGE_TICKS, 0.0F, SIDE_LOOK_DEGREES, 0.0F);
+
+        // Assert: a reaction that ignores the nitwit would roll and raise both brows alike
+        assertTrue(other.roll() > TOLERANCE, "the look never rolled the other villager's brow");
+        assertTrue(nitwit.roll() > other.roll() + TOLERANCE, "the nitwit's brow rolled no further: " + nitwit.roll());
+        assertTrue(other.offset() < -TOLERANCE, "the look never raised the other villager's brow");
+        assertTrue(nitwit.offset() < other.offset() - TOLERANCE,
+                "the nitwit's brow rose no higher: " + nitwit.offset());
+    }
+
+    @Test
+    void proceduralRaise_ofANitwit_passesAnotherVillagersProceduralLimit() {
+        // Arrange: a nitwit's neutral authored brow under an ambient raise past every limit
+        Reacting nitwit = Reacting.onANitwit().followLook(AGE_TICKS, 0.0F, 0.0F, 0.0F);
+
+        // Act
+        float raised = nitwit.browOverAmbient(0.0F, 2.0F * BrowReaction.RAISED_OFFSET_LIMIT, 1.0F);
+
+        // Assert: a limit left unscaled would hold the nitwit's raise at another villager's
+        assertTrue(raised < BrowReaction.PROCEDURAL_RAISE_LIMIT - TOLERANCE,
+                "the nitwit's raise stopped at that limit: " + raised);
+    }
+
+    @Test
+    void finalBrow_ofANitwit_staysWithinTheSameBounds() {
+        // Arrange: a nitwit's authored values past every bound under no reaction
+        Reacting nitwit = Reacting.onANitwit().followLook(AGE_TICKS, 0.0F, 0.0F, 0.0F);
+
+        // Act
+        AnimationPose pastTheRaise = nitwit.browOver(2.0F * BrowReaction.RAISED_OFFSET_LIMIT, 0.0F, 0.0F);
+        AnimationPose pastTheDrop = nitwit.browOver(2.0F * BrowReaction.LOWERED_OFFSET_LIMIT, 0.0F, 0.0F);
+        AnimationPose pastTheRoll = nitwit.browOver(0.0F, 2.0F * BrowReaction.MAX_ROLL_RADIANS, 0.0F);
+
+        // Assert: bounds scaled with the reaction would draw a nitwit's brow past them
+        assertEquals(BrowReaction.RAISED_OFFSET_LIMIT, pastTheRaise.get(BROW_TRANSLATION, Y), 0.0F);
+        assertEquals(BrowReaction.LOWERED_OFFSET_LIMIT, pastTheDrop.get(BROW_TRANSLATION, Y), 0.0F);
+        assertEquals(BrowReaction.MAX_ROLL_RADIANS, pastTheRoll.get(BROW_ROTATION, Z), 0.0F);
+    }
+
+    @Test
     void everyAmbientBrowClip_raisesTheBrowNoHigherThanTheProceduralLimit() throws Exception {
         // Arrange: the ambient clips that key the brow, discovered from their factory
         AnimationPose sample = new AnimationPose(RIG);
@@ -261,10 +304,13 @@ class BrowReactionTest {
         return false;
     }
 
-    private static VillagerAnimationObservation observation(float netHeadYawDegrees, float headPitchDegrees) {
+    private static VillagerAnimationObservation observation(float netHeadYawDegrees,
+                                                            float headPitchDegrees,
+                                                            boolean nitwit) {
         return VillagerAnimationObservations.observation()
                 .netHeadYawDegrees(netHeadYawDegrees)
                 .headPitchDegrees(headPitchDegrees)
+                .nitwit(nitwit)
                 .navigationType(NavigationType.STROLL)
                 .motionArchetype(AnimationArchetype.NONE)
                 .selectionContext(AnimationSelectionContext.generic())
@@ -280,10 +326,26 @@ class BrowReactionTest {
         private final HeadFrame headFrame = new HeadFrame();
         private final FollowerStep step = new FollowerStep();
         private final AnimationPose heldHead = new AnimationPose(RIG);
+        private final boolean nitwit;
+        private VillagerAnimationObservation observation;
+
+        Reacting() {
+            this(false);
+        }
+
+        private Reacting(boolean nitwit) {
+            this.nitwit = nitwit;
+            this.observation = observation(0.0F, 0.0F, nitwit);
+        }
+
+        static Reacting onANitwit() {
+            return new Reacting(true);
+        }
 
         Reacting followLook(long age, float partialTicks, float lookYawDegrees, float lookPitchDegrees) {
+            this.observation = observation(lookYawDegrees, lookPitchDegrees, this.nitwit);
             this.step.measure(age, partialTicks, false);
-            this.headFrame.compose(this.heldHead, observation(lookYawDegrees, lookPitchDegrees));
+            this.headFrame.compose(this.heldHead, this.observation);
             this.reaction.follow(this.headFrame, this.step);
             return this;
         }
@@ -295,7 +357,7 @@ class BrowReactionTest {
             AnimationPose pose = new AnimationPose(RIG);
             pose.set(BROW_TRANSLATION, Y, authoredOffset);
             pose.set(BROW_ROTATION, Z, authoredRoll);
-            this.reaction.apply(pose, weight, authoredOffset);
+            this.reaction.apply(pose, weight, authoredOffset, this.observation);
             return pose;
         }
 
@@ -306,7 +368,7 @@ class BrowReactionTest {
         float browOverAmbient(float authoredOffset, float ambientOffset, float weight) {
             AnimationPose pose = new AnimationPose(RIG);
             pose.set(BROW_TRANSLATION, Y, authoredOffset + ambientOffset);
-            this.reaction.apply(pose, weight, authoredOffset);
+            this.reaction.apply(pose, weight, authoredOffset, this.observation);
             return pose.get(BROW_TRANSLATION, Y);
         }
 

@@ -3,6 +3,7 @@ package dev.breezes.settlements.domain.ai.naming;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -10,11 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Unit tests for {@link VillagerNameTable}.
- * <p>
- * No Minecraft types are used — the table is pure Java.
- */
 class VillagerNameTableTest {
 
     private static final UUID VILLAGER_ID = UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001");
@@ -28,31 +24,34 @@ class VillagerNameTableTest {
     }
 
     @Test
-    void resolve_unknownUuid_fallsBackToGenerator() {
-        // Arrange — VILLAGER_ID was never upserted
+    void returnsGeneratedName_whenUuidHasNoStoredName() {
+        // Arrange
+        VillagerNamePool pool = new VillagerNamePool(List.of("Generated name"));
 
         // Act
-        String resolved = this.table.resolve(VILLAGER_ID);
+        String resolved = this.table.resolve(VILLAGER_ID, pool);
 
-        // Assert — fallback is exactly what the generator would have produced
-        assertEquals(VillagerNameGenerator.generateName(VILLAGER_ID), resolved);
+        // Assert
+        assertEquals("Generated name", resolved);
+        assertTrue(this.table.entriesView().isEmpty());
+        assertFalse(this.table.isDirty());
     }
 
     @Test
-    void resolve_knownUuid_returnsStoredName() {
+    void returnsStoredName_whenThePoolIsEmpty() {
         // Arrange
         this.table.upsert(VILLAGER_ID, "Alderman Finn");
 
         // Act
-        String resolved = this.table.resolve(VILLAGER_ID);
+        String resolved = this.table.resolve(VILLAGER_ID, VillagerNamePool.EMPTY);
 
-        // Assert — stored name wins over the generator fallback
+        // Assert
         assertEquals("Alderman Finn", resolved);
     }
 
     @Test
-    void upsert_newEntry_marksDirty() {
-        // Arrange — table starts clean
+    void marksDirty_whenANewNameIsStored() {
+        // Arrange
 
         // Act
         this.table.upsert(VILLAGER_ID, "Finn");
@@ -62,20 +61,20 @@ class VillagerNameTableTest {
     }
 
     @Test
-    void upsert_sameValueAgain_doesNotReMarkDirty() {
+    void staysClean_whenTheSameNameIsStoredAgain() {
         // Arrange
         this.table.upsert(VILLAGER_ID, "Finn");
         this.table.clearDirty();
 
-        // Act — upsert the exact same name a second time
+        // Act
         this.table.upsert(VILLAGER_ID, "Finn");
 
-        // Assert — no actual content change occurred
+        // Assert
         assertFalse(this.table.isDirty());
     }
 
     @Test
-    void upsert_overwritesWithDifferentValue_marksDirtyAndReturnsNewName() {
+    void marksDirtyAndReturnsTheReplacement_whenAStoredNameChanges() {
         // Arrange
         this.table.upsert(VILLAGER_ID, "Finn");
         this.table.clearDirty();
@@ -85,38 +84,39 @@ class VillagerNameTableTest {
 
         // Assert
         assertTrue(this.table.isDirty());
-        assertEquals("Renamed Finn", this.table.resolve(VILLAGER_ID));
+        assertEquals("Renamed Finn", this.table.resolve(VILLAGER_ID, VillagerNamePool.EMPTY));
     }
 
     @Test
-    void remove_existingEntry_marksDirtyAndFallsBackToGenerator() {
+    void marksDirtyAndUsesTheCurrentPool_whenAStoredNameIsRemoved() {
         // Arrange
         this.table.upsert(VILLAGER_ID, "Finn");
         this.table.clearDirty();
+        VillagerNamePool pool = new VillagerNamePool(List.of("Fallback name"));
 
         // Act
         this.table.remove(VILLAGER_ID);
 
         // Assert
         assertTrue(this.table.isDirty());
-        assertEquals(VillagerNameGenerator.generateName(VILLAGER_ID), this.table.resolve(VILLAGER_ID));
+        assertEquals("Fallback name", this.table.resolve(VILLAGER_ID, pool));
     }
 
     @Test
-    void remove_absentEntry_doesNotMarkDirty() {
-        // Arrange — VILLAGER_ID was never added; OTHER_ID is unrelated noise
+    void staysClean_whenAnAbsentNameIsRemoved() {
+        // Arrange
         this.table.upsert(OTHER_ID, "Someone Else");
         this.table.clearDirty();
 
         // Act
         this.table.remove(VILLAGER_ID);
 
-        // Assert — removing a UUID with no entry is not a content change
+        // Assert
         assertFalse(this.table.isDirty());
     }
 
     @Test
-    void clearDirty_resetsFlag() {
+    void staysClean_afterDirtyStateIsCleared() {
         // Arrange
         this.table.upsert(VILLAGER_ID, "Finn");
 
@@ -128,17 +128,20 @@ class VillagerNameTableTest {
     }
 
     @Test
-    void constructor_withInitialEntries_seedsWithoutMarkingDirty() {
-        // Arrange — simulates the persistence shell reconstructing the table from NBT on load
-        VillagerNameTable seeded = new VillagerNameTable(Map.of(VILLAGER_ID, "Finn"));
+    void retainsRestoredNames_withoutMarkingDirty() {
+        // Arrange
+        Map<UUID, String> restoredNames = Map.of(VILLAGER_ID, "Finn");
 
-        // Act + Assert — a freshly-loaded table is not "dirty"; nothing changed, it was restored
+        // Act
+        VillagerNameTable seeded = new VillagerNameTable(restoredNames);
+
+        // Assert
         assertFalse(seeded.isDirty());
-        assertEquals("Finn", seeded.resolve(VILLAGER_ID));
+        assertEquals("Finn", seeded.resolve(VILLAGER_ID, VillagerNamePool.EMPTY));
     }
 
     @Test
-    void entriesView_reflectsCurrentContentOnly() {
+    void containsCurrentNames_afterAnEntryIsRemoved() {
         // Arrange
         this.table.upsert(VILLAGER_ID, "Finn");
         this.table.upsert(OTHER_ID, "Astrid");
@@ -147,9 +150,58 @@ class VillagerNameTableTest {
         // Act
         Map<UUID, String> entries = this.table.entriesView();
 
-        // Assert — removed entry is gone, remaining entry is present
+        // Assert
         assertEquals(1, entries.size());
         assertEquals("Finn", entries.get(VILLAGER_ID));
+    }
+
+    @Test
+    void usesTheNewPoolWithoutStoringFallbacks_whenThePoolChanges() {
+        // Arrange
+        VillagerNamePool previousPool = new VillagerNamePool(List.of("Before reload"));
+        VillagerNamePool currentPool = new VillagerNamePool(List.of("After reload"));
+
+        // Act
+        String previousName = this.table.resolve(VILLAGER_ID, previousPool);
+        String currentName = this.table.resolve(VILLAGER_ID, currentPool);
+
+        // Assert
+        assertEquals("Before reload", previousName);
+        assertEquals("After reload", currentName);
+        assertTrue(this.table.entriesView().isEmpty());
+        assertFalse(this.table.isDirty());
+    }
+
+    @Test
+    void keepsTheStoredName_whenThePoolChanges() {
+        // Arrange
+        this.table.upsert(VILLAGER_ID, "Player's name");
+        this.table.clearDirty();
+        VillagerNamePool previousPool = new VillagerNamePool(List.of("Before reload"));
+        VillagerNamePool currentPool = new VillagerNamePool(List.of("After reload"));
+
+        // Act
+        String previousName = this.table.resolve(VILLAGER_ID, previousPool);
+        String currentName = this.table.resolve(VILLAGER_ID, currentPool);
+
+        // Assert
+        assertEquals("Player's name", previousName);
+        assertEquals("Player's name", currentName);
+        assertFalse(this.table.isDirty());
+    }
+
+    @Test
+    void returnsUuidIdentityWithoutStoringIt_whenNoPoolOrStoredNameIsAvailable() {
+        // Arrange
+        VillagerNamePool pool = VillagerNamePool.EMPTY;
+
+        // Act
+        String resolved = this.table.resolve(VILLAGER_ID, pool);
+
+        // Assert
+        assertEquals(VILLAGER_ID.toString(), resolved);
+        assertTrue(this.table.entriesView().isEmpty());
+        assertFalse(this.table.isDirty());
     }
 
 }

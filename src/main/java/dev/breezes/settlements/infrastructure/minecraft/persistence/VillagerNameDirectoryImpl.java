@@ -2,8 +2,10 @@ package dev.breezes.settlements.infrastructure.minecraft.persistence;
 
 import dev.breezes.settlements.di.ServerScope;
 import dev.breezes.settlements.domain.ai.naming.VillagerNameDirectory;
+import dev.breezes.settlements.domain.ai.naming.VillagerNamePoolRegistry;
 import jakarta.inject.Inject;
-import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -11,15 +13,17 @@ import javax.annotation.Nonnull;
 import java.util.UUID;
 
 /**
- * Holds no state -- every call resolves {@link VillagerNameSavedData} for the current server fresh.
+ * Resolves persisted villager names with fallbacks from the current datapack pool.
  */
 @ServerScope
-@NoArgsConstructor(onConstructor_ = @Inject)
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE, onConstructor_ = @Inject)
 public final class VillagerNameDirectoryImpl implements VillagerNameDirectory {
+
+    private final VillagerNamePoolRegistry namePools;
 
     @Override
     public String resolve(@Nonnull UUID uuid) {
-        return savedData().resolve(uuid);
+        return savedData().resolve(uuid, this.namePools.pool());
     }
 
     @Override

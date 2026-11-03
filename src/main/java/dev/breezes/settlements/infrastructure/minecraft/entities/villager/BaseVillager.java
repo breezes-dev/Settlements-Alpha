@@ -38,7 +38,6 @@ import dev.breezes.settlements.domain.ai.eventlane.EventLaneConfig;
 import dev.breezes.settlements.domain.ai.knowledge.VillagerKnowledgeStore;
 import dev.breezes.settlements.domain.ai.memory.MemoryTypeRegistry;
 import dev.breezes.settlements.domain.ai.naming.VillagerNameDirectory;
-import dev.breezes.settlements.domain.ai.naming.VillagerNameGenerator;
 import dev.breezes.settlements.domain.ai.navigation.INavigationManager;
 import dev.breezes.settlements.domain.ai.navigation.NavigationType;
 import dev.breezes.settlements.domain.ai.planning.DayPlan;
@@ -444,14 +443,17 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Assigns a UUID-derived name if this villager has no custom name, preserving any existing name.
+     * Assigns a UUID-derived name if this villager has no custom name.
+     * An empty pool leaves it unnamed.
      */
     private void assignNameIfAbsent() {
         if (this.getCustomName() != null) {
             return;
         }
 
-        this.setCustomName(Component.literal(VillagerNameGenerator.generateName(this.getUUID())));
+        ServerComponent server = SettlementsDagger.serverOrThrow();
+        server.villagerNamePoolRegistry().pool().selectNameForUuid(this.getUUID())
+                .ifPresent(name -> this.setCustomName(Component.literal(name)));
     }
 
     @Override
@@ -459,6 +461,9 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         super.onAddedToLevel();
 
         if (this.level() instanceof ServerLevel serverLevel) {
+            // Spawn and NBT load also run for client display copies, which have no server datapack pools.
+            this.assignNameIfAbsent();
+
             // Initial construction uses vanilla's private goal registration. Defer replacement until
             // join so entity state and the server graph exist; loading may already have refreshed it.
             if (!this.brainGoalsInitialized) {
@@ -586,7 +591,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
                                         @Nonnull MobSpawnType spawnType,
                                         @Nullable SpawnGroupData spawnGroupData) {
         SpawnGroupData finalizedSpawnData = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
-        this.assignNameIfAbsent();
         VillagerGeneticAttributes.apply(this);
         this.seedStartingInventoryIfAbsent();
         this.stampOriginIfAbsent(spawnType);
@@ -606,7 +610,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     @Override
     public void load(@Nonnull CompoundTag nbtTag) {
         super.load(nbtTag);
-        this.assignNameIfAbsent();
 
         // Client display copies must retain saved genetic attributes without generating genes or starting food.
         if (this.level().isClientSide()) {
@@ -623,6 +626,7 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         super.tick();
 
         if (!this.level().isClientSide()) {
+            this.tickNameSync();
             this.tickHunger();
             this.tickSooty();
             this.tickOwnedLantern();
@@ -705,7 +709,6 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
         }
 
         this.tickReconciler();
-        this.tickNameSync();
         this.tickMembershipCheck(server);
         this.tickCheckIn(server);
 
@@ -807,13 +810,15 @@ public class BaseVillager extends Villager implements ISettlementsVillager, IVil
     }
 
     /**
-     * Backstop for CustomName writes that bypass {@link #setCustomName}.
+     * Retries absent name assignment and publishes custom-name changes that bypass {@link #setCustomName}.
      */
     private void tickNameSync() {
-        if (!this.nameSyncCooldown.tickCheckAndReset(1)) {
+        // The preceding vanilla tick can remove a dying villager; never recreate its deleted directory entry.
+        if (this.isRemoved() || !this.nameSyncCooldown.tickCheckAndReset(1)) {
             return;
         }
 
+        this.assignNameIfAbsent();
         this.upsertNameInDirectory();
     }
 

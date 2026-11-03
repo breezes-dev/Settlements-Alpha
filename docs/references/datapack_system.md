@@ -66,25 +66,26 @@ folder — e.g. `"settlements/enchantments/costs"` resolves to
 A few things that use *vanilla* datapack formats (recipes, loot tables, structures, tags) sit directly
 under `data/settlements/` and are **not** part of this framework — they are loaded by Minecraft itself.
 
-The loader directories (verbatim scan strings, rooted at the datapack root):
+Find registered loaders in
+[ReloadListenerModule](../../src/main/java/dev/breezes/settlements/di/modules/ReloadListenerModule.java).
+Each manager owns its scan path and points to the codec that defines its file format.
 
-| Directory | Files | Loader family |
-|---|---|---|
-| `settlements/biomes/survey` | ~42 | keyed catalog |
-| `settlements/enchantments/costs` | ~40 | keyed catalog |
-| `settlements/mining/ore_weights` | ~16 | bespoke (Layer 0) |
-| `settlements/traits/definitions` | ~15 | keyed catalog |
-| `settlements/trade_catalog` | ~15 | profession catalog |
-| `settlements/buildings/definitions` | ~15 | bespoke (Layer 0) |
-| `settlements/history/events` | ~12 | keyed catalog |
-| `settlements/craft_catalog` | ~10 | profession catalog |
-| `settlements/traits/scoring` | ~5 | bespoke (Layer 0) |
-| `settlements/mason/excavate_substrate` | ~4 | weighted yield |
-| `settlements/fishing/catches` | ~4 | bespoke (Layer 0) |
-| `settlements/cultivation_crops` | ~4 | bespoke (Layer 0, server-only) |
-| `settlements/specializations` | ~2 | keyed catalog |
-| `settlements/farming/collect_honey` | 1 (`default.json`) | weighted yield |
-| `settlements/farming/harvest_honeycomb` | 1 (`default.json`) | weighted yield |
+### Villager name pools
+
+For villager naming content, start with
+[VillagerNamePoolDataManager](../../src/main/java/dev/breezes/settlements/infrastructure/minecraft/data/naming/VillagerNamePoolDataManager.java),
+the [pool codec](../../src/main/java/dev/breezes/settlements/domain/ai/naming/VillagerNamePoolCodec.java), and the
+[shipped pool](../../src/main/resources/data/settlements/settlements/names/villagers/default.json).
+Like [settlement name pools](../../src/main/java/dev/breezes/settlements/infrastructure/minecraft/data/naming/SettlementNamePoolDataManager.java),
+packs add content through new file ids and replace a file by overriding its id.
+
+Villager name assignment uses server-loaded pools; clients display the synchronized entity name. Reloads affect future
+assignments and generated fallbacks for UUIDs absent from the name directory. Existing entity custom names and stored
+directory names survive pool changes, so removing a pool entry does not erase a name already assigned.
+
+An empty pool leaves unnamed villagers with their vanilla display names. Assignment is retried during normal server
+name synchronization after valid pool content returns. Directory lookups with neither a stored name nor an available
+pool use the UUID string as the fallback identity.
 
 ---
 

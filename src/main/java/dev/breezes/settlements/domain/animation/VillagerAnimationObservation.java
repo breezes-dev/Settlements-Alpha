@@ -113,6 +113,12 @@ public final class VillagerAnimationObservation {
     private boolean handItemShown;
 
     /**
+     * Whether the villager is a nitwit.
+     */
+    @Setter
+    private boolean nitwit;
+
+    /**
      * Sets the sample key, clamping partial ticks to [0, 1] and treating NaN as zero.
      */
     public void setSampleKey(long ageTicks, float partialTicks) {

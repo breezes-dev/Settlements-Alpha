@@ -75,6 +75,7 @@ import dev.breezes.settlements.di.modules.server.UiSyncModule;
 import dev.breezes.settlements.di.modules.server.WorldEventModule;
 import dev.breezes.settlements.domain.ai.catalog.IBehaviorCatalog;
 import dev.breezes.settlements.domain.ai.naming.VillagerNameDirectory;
+import dev.breezes.settlements.domain.ai.naming.VillagerNamePoolRegistry;
 import dev.breezes.settlements.domain.ai.planning.IPlanGenerator;
 import dev.breezes.settlements.domain.ai.schedule.IWeekCycleProvider;
 import dev.breezes.settlements.domain.ai.worldevent.WorldEventBus;
@@ -239,6 +240,8 @@ public interface ServerComponent {
 
     // Exposed for BaseVillager (non-injectable Minecraft entity, server-only)
     VillagerNameDirectory villagerNameDirectory();
+
+    VillagerNamePoolRegistry villagerNamePoolRegistry();
 
     // Exposed for BaseVillager and VillagerTotemItem (non-injectable Minecraft entity and item, server-only)
     SettlementMembershipService settlementMembershipService();

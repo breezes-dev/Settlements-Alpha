@@ -6,6 +6,8 @@ import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
 import dev.breezes.settlements.infrastructure.config.factory.ConfigFactory;
 import dev.breezes.settlements.infrastructure.minecraft.behavior.ambient.AmbientBehaviors;
+import dev.breezes.settlements.infrastructure.minecraft.behavior.ambient.VillagePoiBoundBehaviors;
+import dev.breezes.settlements.infrastructure.minecraft.behavior.ambient.VillagePoiBoundConfig;
 import dev.breezes.settlements.infrastructure.minecraft.behavior.home.BedCompetitorScan;
 import dev.breezes.settlements.infrastructure.minecraft.behavior.home.ValidateNearbyHome;
 import dev.breezes.settlements.infrastructure.minecraft.behavior.threat.FleeTowardVillage;
@@ -44,7 +46,6 @@ import net.minecraft.world.entity.ai.behavior.SetEntityLookTarget;
 import net.minecraft.world.entity.ai.behavior.SetHiddenState;
 import net.minecraft.world.entity.ai.behavior.SetLookAndInteract;
 import net.minecraft.world.entity.ai.behavior.SetWalkTargetFromBlockMemory;
-import net.minecraft.world.entity.ai.behavior.SetWalkTargetFromLookTarget;
 import net.minecraft.world.entity.ai.behavior.ShowTradesToPlayer;
 import net.minecraft.world.entity.ai.behavior.SleepInBed;
 import net.minecraft.world.entity.ai.behavior.SocializeAtBell;
@@ -69,22 +70,17 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Mostly copied from VillagerGoalPackages class
- * while keeping Settlements-specific behavior injection outside of the package builder.
+ * Assembles prioritized villager activity packages with Settlements behavior policies.
  */
 public final class VanillaBehaviorPackages {
 
     private static final float STROLL_SPEED_MODIFIER = 0.4F;
 
-    /**
-     * Core behaviors
-     */
     public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getCorePackage(
             VillagerProfession profession,
             float speed) {
         List<Pair<Integer, ? extends BehaviorControl<? super Villager>>> coreBehaviors = new ArrayList<>();
 
-        // Add default behaviors
         coreBehaviors.addAll(List.of(
                 Pair.of(0, new Swim(0.8F)),
                 Pair.of(0, InteractWithBarriers.create()),
@@ -112,10 +108,10 @@ public final class VanillaBehaviorPackages {
     }
 
     /**
-     * Play activity behaviors
-     * - only used in baby villagers
+     * Builds the play activity package for baby villagers.
      */
     public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPlayPackage(float speed) {
+        int maxPoiDistanceBlocks = ConfigFactory.create(VillagePoiBoundConfig.class).maxPoiDistanceBlocks();
         return ImmutableList.of(
                 getFullLookBehavior(),
                 Pair.of(0, new MoveToTargetSink(80, 120)),
@@ -125,8 +121,8 @@ public final class VanillaBehaviorPackages {
                         ImmutableList.of(
                                 Pair.of(InteractWith.of(EntityType.VILLAGER, 8, MemoryModuleType.INTERACTION_TARGET, speed, 2), 2),
                                 Pair.of(InteractWith.of(EntityType.CAT, 8, MemoryModuleType.INTERACTION_TARGET, speed, 2), 1),
-                                Pair.of(VillageBoundRandomStroll.create(speed), 1),
-                                Pair.of(SetWalkTargetFromLookTarget.create(speed, 2), 1),
+                                Pair.of(VillagePoiBoundBehaviors.randomStroll(speed, maxPoiDistanceBlocks), 1),
+                                Pair.of(VillagePoiBoundBehaviors.walkToLookTarget(speed, 2, maxPoiDistanceBlocks), 1),
                                 Pair.of(new JumpOnBed(speed), 2),
                                 Pair.of(new DoNothing(20, 40), 2)
                         )))
@@ -152,7 +148,6 @@ public final class VanillaBehaviorPackages {
 
     public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getMeetPackage(VillagerProfession profession,
                                                                                                            float speed) {
-        // Default behaviors
         ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> behaviors = ImmutableList.of(
                 getFullLookBehavior(),
                 Pair.of(2, TriggerGate.triggerOneShuffled(ImmutableList.of(
@@ -184,13 +179,13 @@ public final class VanillaBehaviorPackages {
                         GateBehavior.RunningPolicy.RUN_ONE, ImmutableList.of(Pair.of(new TradeWithVillager(), 1))))
         ));
 
-        // Default behaviors that will be randomly chosen to run one
+        int maxPoiDistanceBlocks = ConfigFactory.create(VillagePoiBoundConfig.class).maxPoiDistanceBlocks();
         ArrayList<Pair<? extends BehaviorControl<? super Villager>, Integer>> idleChoiceBehaviors = new ArrayList<>();
         idleChoiceBehaviors.addAll(List.of(
                 Pair.of(InteractWith.of(EntityType.VILLAGER, 8, MemoryModuleType.INTERACTION_TARGET, speed, 2), 2),
                 Pair.of(InteractWith.of(EntityType.CAT, 8, MemoryModuleType.INTERACTION_TARGET, speed, 2), 1),
-                Pair.of(VillageBoundRandomStroll.create(speed), 1),
-                Pair.of(SetWalkTargetFromLookTarget.create(speed, 2), 1),
+                Pair.of(VillagePoiBoundBehaviors.randomStroll(speed, maxPoiDistanceBlocks), 1),
+                Pair.of(VillagePoiBoundBehaviors.walkToLookTarget(speed, 2, maxPoiDistanceBlocks), 1),
                 Pair.of(new JumpOnBed(speed), 1),
                 Pair.of(new DoNothing(30, 60), 1)
         ));
@@ -201,11 +196,12 @@ public final class VanillaBehaviorPackages {
     }
 
     public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPanicPackage(VillagerProfession profession, float speed) {
+        int maxPoiDistanceBlocks = ConfigFactory.create(VillagePoiBoundConfig.class).maxPoiDistanceBlocks();
         return ImmutableList.of(
                 getMinimalLookBehavior(),
                 Pair.of(1, FleeTowardVillage.create(MemoryModuleType.NEAREST_HOSTILE, speed, 6)),
                 Pair.of(1, FleeTowardVillage.create(MemoryModuleType.HURT_BY_ENTITY, speed, 6)),
-                Pair.of(3, VillageBoundRandomStroll.create(speed, 2, 2))
+                Pair.of(3, VillagePoiBoundBehaviors.randomStroll(speed, 2, 2, maxPoiDistanceBlocks))
         );
     }
 
@@ -213,7 +209,6 @@ public final class VanillaBehaviorPackages {
         return ImmutableList.of(
                 getMinimalLookBehavior(),
                 Pair.of(0, RingBell.create()),
-                // Gated so the vanilla behaviors do not set a walk target under an installed override
                 Pair.of(0, AmbientBehaviors.gated(TriggerGate.triggerOneShuffled(ImmutableList.of(
                         Pair.of(SetWalkTargetFromBlockMemory.create(MemoryModuleType.MEETING_POINT, speed, 2, 150, 200), 6),
                         Pair.of(VillageBoundRandomStroll.create(speed), 2)
@@ -224,7 +219,6 @@ public final class VanillaBehaviorPackages {
     public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRaidHidePackage(float speed) {
         return ImmutableList.of(
                 getMinimalLookBehavior(),
-                // Gated so the vanilla behaviors do not set a walk target under an installed override
                 Pair.of(2, AmbientBehaviors.gated(BehaviorBuilder.sequence(
                         BehaviorBuilder.triggerIf(VanillaBehaviorPackages::hasActiveRaid),
                         LocateHidingPlace.create(24, speed, 1)
@@ -252,7 +246,7 @@ public final class VanillaBehaviorPackages {
     }
 
     /**
-     * Usually used when the villager is "busy"
+     * Builds a look behavior limited to nearby villagers and players.
      */
     public static Pair<Integer, BehaviorControl<LivingEntity>> getMinimalLookBehavior() {
         return Pair.of(5, new RunOne<>(ImmutableList.of(
@@ -263,7 +257,7 @@ public final class VanillaBehaviorPackages {
     }
 
     /**
-     * Usually used when the villager is "free"
+     * Builds a look behavior that considers nearby villagers, players, animals, and monsters.
      */
     public static Pair<Integer, BehaviorControl<LivingEntity>> getFullLookBehavior() {
         return Pair.of(5, new RunOne<>(ImmutableList.of(

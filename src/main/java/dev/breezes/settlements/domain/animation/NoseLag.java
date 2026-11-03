@@ -15,9 +15,16 @@ final class NoseLag {
     private static final float ROLL_PER_RADIAN_OF_LAG = 1.2F;
 
     /**
-     * The widest nose roll either way, in radians, for the lag's own roll and for the nose roll's final value.
+     * The widest nose roll either way, in radians, for the lag's own roll and for the nose roll's final value, on a
+     * villager other than a nitwit.
      */
     static final float MAX_ROLL_RADIANS = 20.0F * Mth.DEG_TO_RAD;
+
+    /**
+     * How many times further a nitwit's nose rolls than another villager's for the same lag, and how many times wider
+     * its roll bounds are.
+     */
+    static final float NITWIT_ROLL_SCALE = 2.0F;
 
     private static final int NOSE_ROTATION = VillagerAnimationRig.RIG.indexOf(AnimationTargets.NOSE_ROTATION);
     private static final int ROLL_AXIS = 2;
@@ -47,19 +54,22 @@ final class NoseLag {
     }
 
     /**
-     * Adds a weight-scaled, bounded lag roll to the pose and clamps its final nose roll regardless of weight.
+     * Adds a weight-scaled, bounded lag roll to the pose and clamps its final nose roll regardless of weight. A
+     * nitwit's lag roll and both bounds are scaled by {@link #NITWIT_ROLL_SCALE}.
      *
      * @param pose   pose on the villager rig; not validated
      * @param weight fraction of the lag roll to apply, in [0, 1]; not validated
      */
     void apply(@Nonnull AnimationPose pose, float weight, @Nonnull VillagerAnimationObservation observation) {
         float lag = ExponentialFollower.wrapRadians(this.smoothedHeading.getValue() - this.headWorldHeading);
+        float rollScale = observation.isNitwit() ? NITWIT_ROLL_SCALE : 1.0F;
+        // The bounds scale with the roll, or they would clamp a nitwit's wider swing back to another villager's
+        float maxRoll = rollScale * MAX_ROLL_RADIANS;
         // Rolling by the lag swings the hanging nose's tip away from the side the head turns toward, so it trails;
         // upside down, the model is mirrored in world heading, so the same trail needs the opposite roll
-        float lagRoll = ROLL_PER_RADIAN_OF_LAG * (observation.isUpsideDown() ? -lag : lag);
-        float roll = pose.get(NOSE_ROTATION, ROLL_AXIS)
-                + weight * Math.clamp(lagRoll, -MAX_ROLL_RADIANS, MAX_ROLL_RADIANS);
-        pose.set(NOSE_ROTATION, ROLL_AXIS, Math.clamp(roll, -MAX_ROLL_RADIANS, MAX_ROLL_RADIANS));
+        float lagRoll = rollScale * ROLL_PER_RADIAN_OF_LAG * (observation.isUpsideDown() ? -lag : lag);
+        float roll = pose.get(NOSE_ROTATION, ROLL_AXIS) + weight * Math.clamp(lagRoll, -maxRoll, maxRoll);
+        pose.set(NOSE_ROTATION, ROLL_AXIS, Math.clamp(roll, -maxRoll, maxRoll));
     }
 
 }

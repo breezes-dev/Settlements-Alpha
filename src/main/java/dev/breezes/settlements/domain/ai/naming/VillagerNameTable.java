@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * In-memory {@link VillagerNameDirectory}.
+ * Stored villager display names with content-change tracking.
  */
-public final class VillagerNameTable implements VillagerNameDirectory {
+public final class VillagerNameTable {
 
     private final Map<UUID, String> namesByUuid;
     @Getter
@@ -24,13 +24,15 @@ public final class VillagerNameTable implements VillagerNameDirectory {
         this.namesByUuid = new HashMap<>(initialEntries);
     }
 
-    @Override
-    public String resolve(@Nonnull UUID uuid) {
+    /**
+     * Returns the stored name or a name derived from the current pool. If neither is available, returns the UUID string.
+     * Generated fallbacks are not stored.
+     */
+    public String resolve(@Nonnull UUID uuid, @Nonnull VillagerNamePool pool) {
         String stored = this.namesByUuid.get(uuid);
-        return stored != null ? stored : VillagerNameGenerator.generateName(uuid);
+        return stored != null ? stored : pool.selectNameForUuid(uuid).orElseGet(uuid::toString);
     }
 
-    @Override
     public void upsert(@Nonnull UUID uuid, @Nonnull String name) {
         String previous = this.namesByUuid.put(uuid, name);
         if (!name.equals(previous)) {
@@ -38,7 +40,6 @@ public final class VillagerNameTable implements VillagerNameDirectory {
         }
     }
 
-    @Override
     public void remove(@Nonnull UUID uuid) {
         String previous = this.namesByUuid.remove(uuid);
         if (previous != null) {

@@ -47,7 +47,9 @@ the background layer.
 4. `tickSocialCue()` — `SocialCueArbiter`; see [Ambient Social Cue Lane](#ambient-social-cue-lane).
 5. `tickPerception()` — `PerceptionPipeline`, throttled, and skipped entirely while the SIS kill-switch is off.
 6. `tickReconciler()` — discharges crash-orphaned teardown obligations.
-7. `tickNameSync()` — republishes the villager's name if it drifted.
+
+Name synchronization is independent of the AI pass, so disabled AI does not prevent name assignment after an empty
+datapack pool recovers.
 
 **SocialCue must tick after the brain.** Cue admission compares a cue's channels against the channels the running
 behavior holds, and that descriptor is written during the brain tick.

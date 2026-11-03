@@ -287,7 +287,7 @@ public final class VillagerAnimationPipeline {
 
         // The bounds and the pupil containment are the last writes to their channels, so they bound every source
         noseLag.apply(pose, this.suppression.remaining(SuppressibleComponent.NOSE_LAG), observation);
-        browReaction.apply(pose, browWeight, authoredBrowOffset);
+        browReaction.apply(pose, browWeight, authoredBrowOffset, observation);
         Gaze.apply(pose, this.suppression.remaining(SuppressibleComponent.GAZE), this.headFrame);
         PupilContainment.apply(pose);
 
